@@ -39,109 +39,115 @@ filename = args.filename[0]
 #   intersection, union, etc.
 #
 
-cell_possibles = []    # [col][row] = set of possible values for a cell
+cell_candidates = []   # [col][row] = set of possible values for a cell
 
-box_possibles = []      # [box_col][box_row][value] = set of possible
+box_candidates = []    # [box_col][box_row][value] = set of possible
                        #        coords for value in box
-row_possibles = []      # [row][value] = set of possible columns for value in row
-col_possibles = []      # [col][value] = set of possible rows for value in column
+row_candidates = []    # [row][value] = set of possible cols for value in row
+col_candidates = []    # [col][value] = set of possible rows for value in col
 result_grid = []       # [col][row] = value; value is '-' if unknown
+
+all_values = range(1, 10)   # all cell values, i.e. 1 - 9
+all_indices = range(0, 9)   # all row, col or value indices, i.e. 0 - 8
 
 known_cells_count = 0
 
 def init():
-    for _col in range(0, 9):
+    for _col in all_indices:
         #print "_col = ", _col
         result_grid.append([])
-        cell_possibles.append([])
-        for _row in range(0, 9):
+        cell_candidates.append([])
+        for _row in all_indices:
             #print "_row = ", _row
-            cell_possibles[_col].append(set([1,2,3,4,5,6,7,8,9]))
+            cell_candidates[_col].append(set(all_values))
             result_grid[_col].append("-")
     # init boxes
     for _col in range(0, 3):
-        box_possibles.append([])        # add empty column
+        box_candidates.append([])        # add empty column
         for _row in range(0, 3):
-            box_possibles[_col].append([])        # add empty n list
-            for _value in range(0, 9):
-                box_possibles[_col][_row].append(set([]))
+            box_candidates[_col].append([])        # add empty n list
+            for _value in all_indices:
+                box_candidates[_col][_row].append(set([]))
                 for _box_col in range(_col*3, (_col*3)+3):
                     for _box_row in range(_row*3, (_row*3)+3):
-                        box_possibles[_col][_row][_value].add((_box_col, _box_row));
+                        box_candidates[_col][_row][_value].add(
+                                (_box_col, _box_row)
+                        );
+
     # init rows
-    for _row in range(0,9):
-        row_possibles.append([])        # add empty row
-        for _value in range(0, 9):
-            row_possibles[_row].append(set([]))        # add empty n set
-            for _col in range(0, 9):
-                row_possibles[_row][_value].add(_col)
+    for _row in all_indices:
+        row_candidates.append([])        # add empty row
+        for _value in all_indices:
+            row_candidates[_row].append(set([]))        # add empty n set
+            for _col in all_indices:
+                row_candidates[_row][_value].add(_col)
+
     # init columns
-    for _col in range(0,9):
-        col_possibles.append([])        # add empty column
-        for _value in range(0, 9):
-            col_possibles[_col].append(set([]))        # add empty n set
-            for _row in range(0, 9):
-                col_possibles[_col][_value].add(_row)
+    for _col in all_indices:
+        col_candidates.append([])        # add empty column
+        for _value in all_indices:
+            col_candidates[_col].append(set([]))        # add empty n set
+            for _row in all_indices:
+                col_candidates[_col][_value].add(_row)
 
-def remove_cell_candidate(col, y, value):
-    # Called when it is certain that a cell can't contain a value.
-
-    # Remove its value or its coords from the various "possibles" data
-    # structures. This in turn can recurse when only one cell possibility
-    # is found.
+def remove_cell_candidate(col, row, eliminated_value):
+    # Called when it is certain that a cell doesn't contain a value.
+    # Remove its value or its coords from the various "candidates" data
+    # structures. This in turn can recurse when only one possibility
+    # remains in any of those structures.
 
     # TODO need verbose function
-    #print "remove_cell_candidate(%d, %d) %d" % (col, y, value)
+    #print "remove_cell_candidate(%d, %d) %d" % (col, row, eliminated_value)
 
     # Cell
-    # Remove value from set of possibilities for that cell.
-    cell = cell_possibles[col][y]
-    if (value in cell and len(cell) > 1):
-        cell.remove(value)
+    # Remove eliminated_value from set of possibilities for that cell.
+    cell = cell_candidates[col][row]
+    if (eliminated_value in cell and len(cell) > 1):
+        cell.remove(eliminated_value)
         if (len(cell) == 1):    # found last possible value for cell
-            onlyValue = cell.pop()
-            print "cellfind %d at (%d, %d)" % (onlyValue, col, y)
-            cell.add(onlyValue)
-            set_cell(col, y, onlyValue)
+            only_remaining_value = cell.pop()
+            print "found cell value %d at (%d, %d)" % (only_remaining_value, col, row)
+            cell.add(only_remaining_value)
+            set_cell(col, row, only_remaining_value)
 
     # Box
-    # Remove coord from set of possibilities for that value in containing box.
-    (_box_col, _box_row) = (col/3, y/3)
-    coords = box_possibles[_box_col][_box_row][value-1]
-    # todo: EXPLAIN 1
-    if ((col, y) in coords and len(coords) > 1):
-        coords.remove((col, y))
+    # Remove coord from set of possibilities for the eliminated value in
+    # containing box.
+    (_box_col, _box_row) = (col/3, row/3)
+    coords = box_candidates[_box_col][_box_row][eliminated_value-1]
+    if ((col, row) in coords and len(coords) > 1):
+        coords.remove((col, row))
         if (len(coords) == 1):
             onlyCoord = coords.pop()
             coords.add(onlyCoord)
-            print "boxfind value %d at" % value, onlyCoord
-            set_cell(onlyCoord[0], onlyCoord[1], value)
+            print "found box value %d at" % eliminated_value, onlyCoord
+            set_cell(onlyCoord[0], onlyCoord[1], eliminated_value)
 
     # Row
-    # Remove col from row for that value.
-    xValues = row_possibles[y][value-1]
-    if (col in xValues and len(xValues) > 1):
-        xValues.remove(col)
-        if (len(xValues) == 1):
-            onlyX = xValues.pop()
-            xValues.add(onlyX)
-            print "rowfind value %d (%d, %d)" % (value, onlyX, y)
-            set_cell(onlyX, y, value)
+    # Remove col from row for the eliminated value.
+    col_indices = row_candidates[row][eliminated_value-1]
+    if (col in col_indices and len(col_indices) > 1):
+        col_indices.remove(col)
+        if (len(col_indices) == 1):
+            only_col = col_indices.pop()
+            col_indices.add(only_col)
+            print "found row value %d (%d, %d)" % (eliminated_value, only_col, row)
+            set_cell(only_col, row, eliminated_value)
 
     # Column
-    # Remove row from column for that value.
-    yValues = col_possibles[col][value-1]
+    # Remove row from column for the eliminated value.
+    row_indices = col_candidates[col][eliminated_value-1]
     # TODO need verbose function
-    #print "col %d remove %d from" % (col, y), yValues
-    if (y in yValues and len(yValues) > 1):
-        yValues.remove(y)
-        if (len(yValues) == 1):
-            onlyY = yValues.pop()
-            yValues.add(onlyY)
-            print "colfind value %d (%d, %d)" % (value, col, onlyY)
-            set_cell(col, onlyY, value)
+    #print "col %d remove %d from" % (col, row), row_indices
+    if (row in row_indices and len(row_indices) > 1):
+        row_indices.remove(row)
+        if (len(row_indices) == 1):
+            only_row = row_indices.pop()
+            row_indices.add(only_row)
+            print "found col value %d (%d, %d)" % (eliminated_value, col, only_row)
+            set_cell(col, only_row, eliminated_value)
 
-def reduce_possibles(col, row, known_value):
+def reduce_candidates(col, row, known_value):
     # Given known value for a cell, reduce possibilities
     # elsewhere (row, column and box)
     #print "reduce(%d, %d) %d" % (col, row, known_value)
@@ -149,14 +155,14 @@ def reduce_possibles(col, row, known_value):
     # For completeness, we have to reduce the various possibility
     # sets down to just one value, since this value is known and
     # is the only possible value.
-    cell_possibles[col][row] = set([known_value])
-    box_possibles[col/3][row/3][known_value-1] = set([(col, row)])
-    row_possibles[row][known_value-1] = set([col])
-    col_possibles[col][known_value-1] = set([row])
+    cell_candidates[col][row] = set([known_value])
+    box_candidates[col/3][row/3][known_value-1] = set([(col, row)])
+    row_candidates[row][known_value-1] = set([col])
+    col_candidates[col][known_value-1] = set([row])
     
     # Cell
     #print "reduce cell..."
-    for _value in range(0,9):
+    for _value in all_indices:
         if (_value+1 != known_value):
             remove_cell_candidate(col, row, _value+1)
     
@@ -172,13 +178,13 @@ def reduce_possibles(col, row, known_value):
     
     # Column
     #print "reduce column..."
-    for _row in range(0, 9):
+    for _row in all_indices:
         if (_row != row):
             remove_cell_candidate(col, _row, known_value)
     
     # Row
     #print "reduce row..."
-    for _col in range(0, 9):
+    for _col in all_indices:
         if (_col != col):
             remove_cell_candidate(_col, row, known_value)
 
@@ -194,7 +200,7 @@ def set_cell(_col, _row, know_value):
         return
 
     result_grid[_col][_row] = know_value
-    reduce_possibles(_col, _row, know_value)
+    reduce_candidates(_col, _row, know_value)
     global known_cells_count
     known_cells_count += 1
     # TODO: raise exception here if solved
@@ -226,55 +232,55 @@ def loadfile(pathname):
 
 # Output functions
 def print_result():
-    for _row in range(0, 9):
+    for _row in all_indices:
         if (_row == 3 or _row == 6):
             print ""
-        for _col in range(0, 9):
+        for _col in all_indices:
             if (_col == 3 or _col == 6):
                 sys.stdout.write(" ")
             sys.stdout.write("%c" % str(result_grid[_col][_row]))
         print ""
 
-def print_cell_possibles():
-    print "Cell possibles:"
-    for _row in range(0, 9):
-        for _col in range(0, 9):
-            poss = cell_possibles[_col][_row]
+def print_cell_candidates():
+    print "Cell candidates:"
+    for _row in all_indices:
+        for _col in all_indices:
+            poss = cell_candidates[_col][_row]
             if (len(poss) > 1):
                 print "cell (%d, %d) = " % (_col, _row), poss
 
-def print_box_possibles():
-    print "Box possibles:"
+def print_box_candidates():
+    print "Box candidates:"
     for _col in range(0, 3):
         for _row in range(0, 3):
             print "box(%d, %d):" % (_col, _row)
             # print by value
-            for _value in range(1, 10):
-                poss = box_possibles[_col][_row][_value-1]
+            for _value in all_values:
+                poss = box_candidates[_col][_row][_value-1]
                 if (len(poss) > 1):
                     print "  value %d = " % _value, poss
             # print by coord
             for _box_col in range(0,3):
                 for _box_row in range(0,3):
-                    cellposs = cell_possibles[_col*3 + _box_col][_row*3 + _box_row]
+                    cellposs = cell_candidates[_col*3 + _box_col][_row*3 + _box_row]
                     if (len(cellposs) > 1):
                         print "  cell (%d, %d) = " % (_box_col, _box_row), cellposs
 
-def print_row_possibles():
-    print "Row possibles:"
-    for _row in range(0, 9):
+def print_row_candidates():
+    print "Row candidates:"
+    for _row in all_indices:
         print "row %d:" % _row
-        for _value in range(1, 10):
-            poss = row_possibles[_row][_value-1]
+        for _value in all_values:
+            poss = row_candidates[_row][_value-1]
             if (len(poss) > 1):
                 print "  value %d =" % _value, poss
 
-def print_col_possibles():
-    print "Col possibles:"
-    for _col in range(0, 9):
+def print_col_candidates():
+    print "Col candidates:"
+    for _col in all_indices:
         print "col %d:" % _col
-        for _value in range(1, 10):
-            poss = col_possibles[_col][_value-1]
+        for _value in all_values:
+            poss = col_candidates[_col][_value-1]
             if (len(poss) > 1):
                 print "  value %d =" % _value, poss
 
@@ -316,11 +322,11 @@ def solve():
     # can remove all other candidates.
     #
     print "Search for column pairs..."
-    for _col in range(0, 9):        # for each column
+    for _col in all_indices:        # for each column
         #print "col %d:" % _col
         dict = {}
-        for _value in range(1, 10):        # for each value
-            poss = frozenset(col_possibles[_col][_value-1])
+        for _value in all_values:        # for each value
+            poss = frozenset(col_candidates[_col][_value-1])
             if (poss in dict):
                 dict[poss].append(_value)
             else:
@@ -331,7 +337,7 @@ def solve():
                 for _row in poss:
                     eliminateList = []
                     # for each of these cells, eliminate other candidates
-                    for _candidate in cell_possibles[_col][_row]:
+                    for _candidate in cell_candidates[_col][_row]:
                         if _candidate not in dict[poss]:
                             print "      eliminate %d at (%d, %d)" % \
                                 (_candidate, _col, _row)
@@ -339,11 +345,11 @@ def solve():
                             break
 
     print "Search for row pairs..."
-    for _row in range(0, 9):        # for each row
+    for _row in all_indices:        # for each row
         #print "row %d:" % _row
         dict = {}
-        for _value in range(1, 10):        # for each value
-            poss = frozenset(row_possibles[_row][_value-1])
+        for _value in all_values:        # for each value
+            poss = frozenset(row_candidates[_row][_value-1])
             if (poss in dict):
                 dict[poss].append(_value)
             else:
@@ -354,7 +360,7 @@ def solve():
                 for _col in poss:
                     eliminateList = []
                     # for each of these cells, eliminate other candidates
-                    for _candidate in cell_possibles[_col][_row]:
+                    for _candidate in cell_candidates[_col][_row]:
                         if _candidate not in dict[poss]:
                             print "      eliminate %d at (%d, %d)" % \
                                 (_candidate, _col, _row)
@@ -378,7 +384,7 @@ if (known_cells_count == (9*9)):
     print "Solved!"
 else:
     print "Not solved."
-    print_cell_possibles()
-    print_box_possibles()
-    print_row_possibles()
-    print_col_possibles()
+    print_cell_candidates()
+    print_box_candidates()
+    print_row_candidates()
+    print_col_candidates()

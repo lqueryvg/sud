@@ -8,6 +8,13 @@ parser.add_argument('filename', nargs=1)
 args = parser.parse_args()
 filename = args.filename[0]
 
+import logging
+#logging.getLogger.level = logging.DEBUG
+logging.basicConfig(
+        level = logging.DEBUG,
+        format = "%(levelname)s %(message)s"
+        )
+
 # Example input file format:
 # -6- 3-- 8-4
 # 537 -9- ---
@@ -106,7 +113,8 @@ def remove_cell_candidate(col, row, eliminated_value):
         cell.remove(eliminated_value)
         if (len(cell) == 1):    # found last possible value for cell
             only_remaining_value = cell.pop()
-            print "found cell value %d at (%d, %d)" % (only_remaining_value, col, row)
+            logging.debug("found cell value %d at (%d, %d)",
+                    only_remaining_value, col, row)
             cell.add(only_remaining_value)
             set_cell(col, row, only_remaining_value)
 
@@ -120,7 +128,7 @@ def remove_cell_candidate(col, row, eliminated_value):
         if (len(coords) == 1):
             onlyCoord = coords.pop()
             coords.add(onlyCoord)
-            print "found box value %d at" % eliminated_value, onlyCoord
+            logging.debug("found box value %d at %r", eliminated_value, onlyCoord)
             set_cell(onlyCoord[0], onlyCoord[1], eliminated_value)
 
     # Row
@@ -131,20 +139,21 @@ def remove_cell_candidate(col, row, eliminated_value):
         if (len(col_indices) == 1):
             only_col = col_indices.pop()
             col_indices.add(only_col)
-            print "found row value %d (%d, %d)" % (eliminated_value, only_col, row)
+            logging.debug("found row value %d (%d, %d)",
+                    eliminated_value, only_col, row)
             set_cell(only_col, row, eliminated_value)
 
     # Column
     # Remove row from column for the eliminated value.
     row_indices = col_candidates[col][eliminated_value-1]
-    # TODO need verbose function
     #print "col %d remove %d from" % (col, row), row_indices
     if (row in row_indices and len(row_indices) > 1):
         row_indices.remove(row)
         if (len(row_indices) == 1):
             only_row = row_indices.pop()
             row_indices.add(only_row)
-            print "found col value %d (%d, %d)" % (eliminated_value, col, only_row)
+            logging.debug("found col value %d (%d, %d)",
+                    eliminated_value, col, only_row)
             set_cell(col, only_row, eliminated_value)
 
 def reduce_candidates(col, row, known_value):
@@ -288,13 +297,15 @@ def print_col_candidates():
 
 def solve():
     print "Solving..."
-    # This is where we need to implement fancy stuff to do a bit more
-    # clever detection.
+
+    # Slightly more sophisticated techniques for candidate elimination.
     # E.g. "matched cell groups"
-    # Example, candidates in a column...
-    # Row   Candidates
+
+    # Example, in the cells of a particular column, the candidates look like
+    # this for each row:
+    #   Row   Candidates
     #    1.    46                        46
-    #    2.    1469                     19 (remove 46)
+    #    2.    1469                      19 (remove 46)
     #    3.    68            ->            68
     #    4.    48                        48
     #    5.    14689                     19 (remove 468)
@@ -321,7 +332,7 @@ def solve():
     # and a list of 2 candidates. Therefore, for these two locations we
     # can remove all other candidates.
     #
-    print "Search for column pairs..."
+    logging.debug("Search for column pairs...")
     for _col in all_indices:        # for each column
         #print "col %d:" % _col
         dict = {}
@@ -333,18 +344,18 @@ def solve():
                 dict[poss] = [_value]
         for poss in dict:
             if len(poss) == 2 and len(dict[poss]) == 2:
-                print "  col", _col, ":", poss, "=", dict[poss]
+                logging.debug("  col%d: %s = %s", _col, poss, dict[poss])
                 for _row in poss:
                     eliminateList = []
                     # for each of these cells, eliminate other candidates
                     for _candidate in cell_candidates[_col][_row]:
                         if _candidate not in dict[poss]:
-                            print "      eliminate %d at (%d, %d)" % \
-                                (_candidate, _col, _row)
+                            logging.debug("      eliminate %d at (%d, %d)",
+                                _candidate, _col, _row)
                             eliminate_cell_candidate(_col, _row, _candidate)
                             break
 
-    print "Search for row pairs..."
+    logging.debug("Search for row pairs...")
     for _row in all_indices:        # for each row
         #print "row %d:" % _row
         dict = {}
@@ -356,18 +367,18 @@ def solve():
                 dict[poss] = [_value]
         for poss in dict:
             if len(poss) == 2 and len(dict[poss]) == 2:
-                print "  row", _row, ":", poss, "=", dict[poss]
+                logging.debug("  row%d: %s = %s", _row, poss, dict[poss])
                 for _col in poss:
                     eliminateList = []
                     # for each of these cells, eliminate other candidates
                     for _candidate in cell_candidates[_col][_row]:
                         if _candidate not in dict[poss]:
-                            print "      eliminate %d at (%d, %d)" % \
-                                (_candidate, _col, _row)
+                            logging.debug("      eliminate %d at (%d, %d)",
+                                _candidate, _col, _row)
                             eliminate_cell_candidate(_col, _row, _candidate)
                             break
 
-    print "Search for box pairs..."
+    logging.debug("Search for box pairs...")
 
 init()
 loadfile(filename)

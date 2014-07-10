@@ -42,7 +42,7 @@ class TestCandidateSet(unittest.TestCase):
 
     def test_exception_ValueError_on_remove_element_not_there(self):
         obj = sud2.CandidateSet([1,2])
-        self.assertRaises(ValueError, obj.remove, 3)
+        self.assertRaises(KeyError, obj.remove, 3)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

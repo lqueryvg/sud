@@ -3,46 +3,54 @@
 import sud2
 import unittest
 
+
 class TestCandidateSet(unittest.TestCase):
-    def test_exception_constructor_with_zero_elements(self):
-        with self.assertRaises(Exception) as cm:
-            obj = sud2.CandidateSet([])
-        self.assertEqual(cm.exception.args[0], "need >1 element to init candidate set")
+    def test_constructor_zero_elements(self):
+        self.assertRaises(sud2.AtLeastTwoCandidateValuesRequired,
+                          sud2.CandidateSet, [])
 
-    def test_exception_constructor_with_one_element(self):
-        with self.assertRaises(Exception) as cm:
-            obj = sud2.CandidateSet(["one"])
-        self.assertEqual(cm.exception.args[0], "need >1 element to init candidate set")
+    def test_constructor_one_element(self):
+        self.assertRaises(sud2.AtLeastTwoCandidateValuesRequired,
+                          sud2.CandidateSet, ["one"])
 
-#    def test_exception_remove_only_1_element_remains(self):
-#        with self.assertRaises(Exception) as cm:
-#            obj = sud2.CandidateSet([1,2])
-#            obj.remove(2)
-#        self.assertEqual(cm.exception.args[0], "only 1 candidate remains")
-
-    def test_remove_element(self):
-        obj = sud2.CandidateSet([1,3,2])
+    def test_remove_candidate(self):
+        obj = sud2.CandidateSet([1, 3, 2])
         obj.remove(2)
         self.assertFalse(2 in obj)
+        self.assertTrue(1 in obj)
+        self.assertTrue(3 in obj)
 
-    def test_exception_attempt_to_remove_final_element(self):
-        obj = sud2.CandidateSet([1,2])
+    def test_remove_final_candidate(self):
+        obj = sud2.CandidateSet([1, 2])
         try:
             obj.remove(1)
         except:
             pass
-        with self.assertRaises(Exception) as cm:
-            obj.remove(2)
-        self.assertEqual(cm.exception.args[0],
-                "attempt to remove final candidate")
+        self.assertRaises(sud2.RemoveOnlyCandidate, obj.remove, 2)
 
-    def test_exception_LastCandidate(self):
-        obj = sud2.CandidateSet([1,2])
-        self.assertRaises(sud2.LastCandidate, obj.remove, 2)
+    def test_remove_OneCandidateRemains(self):
+        obj = sud2.CandidateSet([1, 2])
+        self.assertRaises(sud2.OneCandidateRemains, obj.remove, 2)
 
-    def test_exception_ValueError_on_remove_element_not_there(self):
-        obj = sud2.CandidateSet([1,2])
+    def test_remove_ValueError_on_remove_element_not_there(self):
+        obj = sud2.CandidateSet([1, 2])
         self.assertRaises(KeyError, obj.remove, 3)
+
+
+class TestCell(unittest.TestCase):
+    def test_set_then_get(self):
+        cell = sud2.Cell([1, 2, 3])
+        cell.set_value(1)
+        self.assertTrue(cell.get_value() == 1)
+
+    def test_set_value_already_set(self):
+        cell = sud2.Cell([1, 2, 3])
+        cell.set_value(1)
+        self.assertRaises(sud2.CellAlreadySet, cell.set_value, 1)
+
+    def test_set_value_not_a_candidate(self):
+        cell = sud2.Cell([1, 2])
+        self.assertRaises(sud2.ValueIsNotACandidate, cell.set_value, 3)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

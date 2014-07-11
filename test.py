@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-import sud2
+# import sud2
 from sud2 import *
 import unittest
 
@@ -16,7 +16,7 @@ class TestCandidateSet(unittest.TestCase):
 
     def test_remove_candidate(self):
         obj = CandidateSet([1, 3, 2])
-        obj.remove(2)
+        obj.remove_candidate(2)
         self.assertFalse(2 in obj)
         self.assertTrue(1 in obj)
         self.assertTrue(3 in obj)
@@ -24,18 +24,18 @@ class TestCandidateSet(unittest.TestCase):
     def test_remove_final_candidate(self):
         obj = CandidateSet([1, 2])
         try:
-            obj.remove(1)
+            obj.remove_candidate(1)
         except:
             pass
-        self.assertRaises(RemoveOnlyCandidate, obj.remove, 2)
+        self.assertRaises(RemoveOnlyCandidate, obj.remove_candidate, 2)
 
     def test_remove_SingleCandidate(self):
         obj = CandidateSet([1, 2])
-        self.assertRaises(SingleCandidate, obj.remove, 2)
+        self.assertRaises(SingleCandidate, obj.remove_candidate, 2)
 
     def test_remove_ValueError_on_remove_element_not_there(self):
         obj = CandidateSet([1, 2])
-        self.assertRaises(KeyError, obj.remove, 3)
+        self.assertRaises(KeyError, obj.remove_candidate, 3)
 
 
 class TestCell(unittest.TestCase):
@@ -53,6 +53,14 @@ class TestCell(unittest.TestCase):
         cell = Cell([1, 2])
         self.assertRaises(ValueIsNotACandidate, cell.set_value, 3)
 
+    def test_remove_candidate(self):
+        # Check inheritance works
+        obj = Cell([1, 3, 2])
+        obj.remove_candidate(2)
+        self.assertFalse(2 in obj)
+        self.assertTrue(1 in obj)
+        self.assertTrue(3 in obj)
+
 
 class TestConstraintGroup(unittest.TestCase):
     def test_notify(self):
@@ -65,4 +73,3 @@ class TestConstraintGroup(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

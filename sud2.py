@@ -49,10 +49,10 @@ class Cell:
     def __init__(self, candidate_values):
         self.candidates = CandidateSet(candidate_values)
         self.value = None
-        self.contraint_groups = []
+        self.constraint_groups = []
 
     def add_constraint_group(self, grp):
-        self.constraint_groups.push(grp)
+        self.constraint_groups.append(grp)
 
     def get_value(self):
         return self.value
@@ -64,9 +64,9 @@ class Cell:
             raise ValueIsNotACandidate
         self.value = value
         self.candidates.clear()    # remove all candidates
-        for constraint_grp in self.contraint_groups:
+        for constraint_grp in self.constraint_groups:
             constraint_grp.notify_cell_changed(self, value)
-        del self.contraint_groups[:]
+        del self.constraint_groups[:]
 
 
 class ConstraintGroup:
@@ -80,4 +80,7 @@ class ConstraintGroup:
     def notify_cell_changed(self, changed_cell, new_value):
         self.cells.remove(changed_cell)
         for cell in self.cells:
-            cell.candidates.remove(new_value)
+            try:
+                cell.candidates.remove(new_value)
+            except OneCandidateRemains:
+                cell.set_value(list(cell.candidates)[0])

@@ -1,7 +1,8 @@
 #!/usr/bin/env python2
 
 
-class OneCandidateRemains(Exception):
+#------------------------------------------------------------------------------
+class SingleCandidate(Exception):
     # Only one candidate remains after remove.
     pass
 
@@ -15,6 +16,7 @@ class AtLeastTwoCandidateValuesRequired(Exception):
     # Need at least two or more candidate values to create a CandidateSet
     pass
 
+#------------------------------------------------------------------------------
 
 class CandidateSet(set):
     # Like a Set but raises exceptions when:
@@ -34,9 +36,10 @@ class CandidateSet(set):
             raise RemoveOnlyCandidate
         super(CandidateSet, self).remove(value)
         if len(self) == 1:
-            raise OneCandidateRemains
+            raise SingleCandidate
 
 
+#------------------------------------------------------------------------------
 class CellAlreadySet(Exception):
     pass
 
@@ -44,6 +47,7 @@ class CellAlreadySet(Exception):
 class ValueIsNotACandidate(Exception):
     pass
 
+#------------------------------------------------------------------------------
 
 class Cell:
     def __init__(self, candidate_values):
@@ -69,6 +73,9 @@ class Cell:
         del self.constraint_groups[:]
 
 
+#------------------------------------------------------------------------------
+
+
 class ConstraintGroup:
     def __init__(self, cells):
         self.cells = cells
@@ -82,5 +89,6 @@ class ConstraintGroup:
         for cell in self.cells:
             try:
                 cell.candidates.remove(new_value)
-            except OneCandidateRemains:
+            except SingleCandidate:
+                # list(my_set)[0] grabs any value from set
                 cell.set_value(list(cell.candidates)[0])

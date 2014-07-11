@@ -52,5 +52,15 @@ class TestCell(unittest.TestCase):
         cell = sud2.Cell([1, 2])
         self.assertRaises(sud2.ValueIsNotACandidate, cell.set_value, 3)
 
+
+class TestConstraintGroup(unittest.TestCase):
+    def test_notify(self):
+        cell1 = sud2.Cell([1, 2])
+        cell2 = sud2.Cell([1, 2])
+        grp = sud2.ConstraintGroup([cell1, cell2])
+        cell1.set_value(1)
+        self.assertTrue(cell2.get_value() == 2)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

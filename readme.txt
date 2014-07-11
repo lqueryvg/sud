@@ -55,4 +55,6 @@ Indexes (Idea)
     of the list of cells for any value is reduced to 1, the position
     of the value is known.
 
-    Therefore the index would need to be notified 
+    Therefore the index would need to be notified whenever a cell value
+    or its candidates change.
+

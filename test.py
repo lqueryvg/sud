@@ -14,12 +14,6 @@ class TestCandidateSet(unittest.TestCase):
             obj = sud2.CandidateSet(["one"])
         self.assertEqual(cm.exception.args[0], "need >1 element to init candidate set")
 
-#    def test_exception_remove_only_1_element_remains(self):
-#        with self.assertRaises(Exception) as cm:
-#            obj = sud2.CandidateSet([1,2])
-#            obj.remove(2)
-#        self.assertEqual(cm.exception.args[0], "only 1 candidate remains")
-
     def test_remove_element(self):
         obj = sud2.CandidateSet([1,3,2])
         obj.remove(2)

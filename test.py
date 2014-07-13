@@ -71,5 +71,10 @@ class TestConstraintGroup(unittest.TestCase):
         self.assertTrue(cell2.get_value() == 2)
 
 
+class TestPuzzle(unittest.TestCase):
+    def test_puzzle(self):
+        puzzle = Puzzle();
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

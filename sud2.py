@@ -47,13 +47,16 @@ class ValueIsNotACandidate(Exception):
 
 class Cell(CandidateSet):
     def __init__(self, candidate_values):
-        # self.candidates = CandidateSet(candidate_values)
         super(Cell, self).__init__(candidate_values)
         self.value = None
-        self.constraint_groups = []
+        self.value_change_listeners = []
+        self.candidate_removed_listeners = []
 
-    def add_constraint_group(self, grp):
-        self.constraint_groups.append(grp)
+    def add_value_change_listener(self, lsnr):
+        self.value_change_listeners.append(lsnr)
+
+    def add_candidate_change_listener(self, lsnr):
+        self.candidate_removed_listeners.append(lsnr)
 
     def get_value(self):
         return self.value
@@ -67,9 +70,14 @@ class Cell(CandidateSet):
         self.value = value
         # self.candidates.clear()    # remove all candidates
         self.clear()    # remove all candidates
-        for constraint_grp in self.constraint_groups:
-            constraint_grp.notify_cell_changed(self, value)
-        del self.constraint_groups[:]
+        for lsnr in self.value_change_listeners:
+            lsnr.notify_cell_value_changed(self, value)
+        del self.value_change_listeners[:]
+
+    def remove_candidate(self, value):
+        super(Cell, self).remove_candidate(value)
+        for lsnr in self.candidate_removed_listeners:
+            lsnr.notify_cell_candidate_removed(self, value)
 
 
 class ConstraintGroup:
@@ -78,14 +86,78 @@ class ConstraintGroup:
 
         # Point each cell back to this constraint group
         for cell in cells:
-            cell.add_constraint_group(self)
+            cell.add_value_change_listener(self)
 
-    def notify_cell_changed(self, changed_cell, new_value):
+    def notify_cell_value_changed(self, changed_cell, new_value):
         self.cells.remove(changed_cell)
         for cell in self.cells:
             try:
-                # cell.candidates.remove(new_value)
                 cell.remove_candidate(new_value)
             except SingleCandidate:
                 # list(my_set)[0] grabs any value from set
                 cell.set_value(list(cell)[0])
+
+class SinglePositionIndex:
+    def __init__(self, cgrp):
+        # Create a dictionary of possible cells
+        # for each possible value in a constraint group.
+        # I.e. a dictionary of lists of cells indexed by candidate values.
+        raise AssertionError("Not implemented yet")     # TODO
+        #self.value_cells = 
+        for cell in cgrp.cells:
+            cell.add_candidate_change_listener(self)
+
+class Grid(object):
+    def __init__(self, numrows, numcols):
+
+        # list of lists, as [row][col]
+        # coords start at 0
+        self.grid = [[]]   
+        for rownum in range(numrows):
+            column = []
+            for colnum in range(numcols):
+                column.append(None)
+            self.grid.append(column)
+
+    def set_rc_cell(self, col, row, value):
+        self.grid[row][col] = value
+
+    def set_xy_cell(self, x, y, value):
+        self.grid[y][x] = value
+
+
+class Puzzle(Grid):
+    def __init__(self):
+        super(Puzzle, self).__init__(9, 9)
+        for x in range(9):
+            for y in range(9):
+                self.set_xy_cell = Cell(range(1,10))
+
+    # TODO add load from file
+
+
+def loadfile(pathname):
+
+    # Empty rows are skipped.
+    # One line per row.
+    # One character per column with
+    _file = open(pathname)
+    _row = 0
+    for _line in _file:
+        if re.search(r"^$", _line):
+            continue
+        if (_row > 8):
+            print "Too many rows (" + str(_row) + " > 8)"
+            sys.exit(1)
+        _values = struct.unpack("cccxcccxcccx", _line);
+        _col = 0
+        # TODO: detect errors on input
+        for _v in _values:
+            #print "_v = %s" % _v
+            if (_v != '-'):
+                set_cell(_col,_row,int(_v))
+            _col = _col + 1
+        _row = _row + 1
+    return
+    
+# The End

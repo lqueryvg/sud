@@ -71,6 +71,19 @@ class TestConstraintGroup(unittest.TestCase):
         self.assertTrue(cell2.get_value() == 2)
 
 
+class TestGrid(unittest.TestCase):
+    def test_grid_xy(self):
+        grid = Grid(2, 2)
+        grid.set_rc_cell(0, 0, 1)
+        grid.set_rc_cell(0, 1, 2)
+        grid.set_rc_cell(1, 0, 3)
+        grid.set_rc_cell(1, 1, 4)
+        self.assertTrue(grid.get_rc_cell(0, 0) == 1)
+        self.assertTrue(grid.get_rc_cell(0, 1) == 2)
+        self.assertTrue(grid.get_rc_cell(1, 0) == 3)
+        self.assertTrue(grid.get_rc_cell(1, 1) == 4)
+
+
 class TestPuzzle(unittest.TestCase):
     def test_puzzle(self):
         puzzle = Puzzle();

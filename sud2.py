@@ -115,12 +115,13 @@ class Grid(object):
         # list of lists, as [row][col]
         # coords start at 0
         self.grid = []
+        self.numrows = numrows
+        self.numcols = numcols
         for rownum in range(numrows):
             row = []
             for colnum in range(numcols):
                 row.append(None)
             self.grid.append(row)
-
 
     def set_rc_cell(self, row, col, value):
         self.grid[row][col] = value
@@ -128,14 +129,50 @@ class Grid(object):
     def get_rc_cell(self, row, col):
         return self.grid[row][col]
 
+    def get_row(self, rownum):
+        _row = []
+        for colnum in range(self.numcols):
+            _row.append(self.get_rc_cell(rownum, colnum))
+        return _row
+
+    def get_col(self, colnum):
+        _col = []
+        for rownum in range(self.numrows):
+            _col.append(self.get_rc_cell(rownum, colnum))
+        return _col
+
+    def get_box(self, rownum, colnum, side_length):
+        _box = []
+        for boxrow in range(rownum, rownum + side_length):
+            for boxcol in range(colnum, colnum + side_length):
+                _box.append(self.get_rc_cell(boxrow, boxcol))
+        return _box
+
 
 class Puzzle(Grid):
+
+    def _add_constraint_groups(self):
+        for rownum in range(9):
+            _row = super(Puzzle, self).get_row(rownum)
+            dummy = ConstraintGroup(_row)
+
+        for colnum in range(9):
+            _col = super(Puzzle, self).get_col(colnum)
+            dummy = ConstraintGroup(_col)
+
+        for boxrow in [0, 3, 6]:
+            for boxcol in [0, 3, 6]:
+                _box = super(Puzzle, self).get_box(boxrow, boxcol, 3)
+                dummy = ConstraintGroup(_box)
+
     def __init__(self):
         super(Puzzle, self).__init__(9, 9)
         for rownum in range(9):
             for colnum in range(9):
                 super(Puzzle, self).set_rc_cell(rownum, colnum,
                                                 Cell(range(1, 10)))
+        self._add_constraint_groups()
+
     # TODO add load from file
 
 

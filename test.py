@@ -72,7 +72,7 @@ class TestConstraintGroup(unittest.TestCase):
 
 
 class TestGrid(unittest.TestCase):
-    def test_grid_xy(self):
+    def test_grid_rc(self):
         grid = Grid(2, 2)
         grid.set_rc_cell(0, 0, 1)
         grid.set_rc_cell(0, 1, 2)
@@ -82,6 +82,15 @@ class TestGrid(unittest.TestCase):
         self.assertTrue(grid.get_rc_cell(0, 1) == 2)
         self.assertTrue(grid.get_rc_cell(1, 0) == 3)
         self.assertTrue(grid.get_rc_cell(1, 1) == 4)
+
+    def test_get_box(self):
+        grid = Grid(2, 2)
+        grid.set_rc_cell(0, 0, 1)
+        grid.set_rc_cell(0, 1, 2)
+        grid.set_rc_cell(1, 0, 3)
+        grid.set_rc_cell(1, 1, 4)
+        box = grid.get_box(0, 0, 2)
+        self.assertTrue(len(box) == 4)
 
 
 class TestPuzzle(unittest.TestCase):

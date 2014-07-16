@@ -110,16 +110,16 @@ class SinglePositionIndex:
 
 
 class Grid(object):
-    def __init__(self, numrows, numcols):
+    def __init__(self, box_width):
 
         # list of lists, as [row][col]
         # coords start at 0
         self.grid = []
-        self.numrows = numrows
-        self.numcols = numcols
-        for rownum in range(numrows):
+        self.numcols = self.numrows = box_width ** 2
+        self.box_width = box_width
+        for rownum in range(self.numrows):
             row = []
-            for colnum in range(numcols):
+            for colnum in range(self.numcols):
                 row.append(None)
             self.grid.append(row)
 
@@ -141,10 +141,10 @@ class Grid(object):
             _col.append(self.get_rc_cell(rownum, colnum))
         return _col
 
-    def get_box(self, rownum, colnum, side_length):
+    def get_box(self, rownum, colnum):
         _box = []
-        for boxrow in range(rownum, rownum + side_length):
-            for boxcol in range(colnum, colnum + side_length):
+        for boxrow in range(rownum, rownum + self.box_width):
+            for boxcol in range(colnum, colnum + self.box_width):
                 _box.append(self.get_rc_cell(boxrow, boxcol))
         return _box
 
@@ -160,15 +160,17 @@ class Puzzle(Grid):
             _col = super(Puzzle, self).get_col(colnum)
             dummy = ConstraintGroup(_col)
 
-        for boxrow in [0, 3, 6]:
-            for boxcol in [0, 3, 6]:
-                _box = super(Puzzle, self).get_box(boxrow, boxcol, 3)
+        for boxrow in range(0, self.numrows, self.box_width):
+            for boxcol in range(0, self.numcols, self.box_width):
+                _box = super(Puzzle, self).get_box(
+                    boxrow, boxcol, self.box_width
+                )
                 dummy = ConstraintGroup(_box)
 
-    def __init__(self):
-        super(Puzzle, self).__init__(9, 9)
-        for rownum in range(9):
-            for colnum in range(9):
+    def __init__(self, box_width):
+        super(Puzzle, self).__init__(box_width)
+        for rownum in range(self.numrows):
+            for colnum in range(self.numcols):
                 super(Puzzle, self).set_rc_cell(rownum, colnum,
                                                 Cell(range(1, 10)))
         self._add_constraint_groups()

@@ -119,9 +119,11 @@ class Grid(object):
                 column.append(None)
             self.grid.append(column)
 
-    def set_rc_cell(self, col, row, value):
+    # index by row then column
+    def set_rc_cell(self, row, col, value):
         self.grid[row][col] = value
 
+    # index by x then y (column then row)
     def set_xy_cell(self, x, y, value):
         self.grid[y][x] = value
 

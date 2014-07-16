@@ -123,7 +123,6 @@ class Grid(object):
                 row.append(None)
             self.grid.append(row)
 
-<<<<<<< HEAD
     # index by row then column
     def set_rc_cell(self, row, col, value):
         self.grid[row][col] = value
@@ -131,9 +130,6 @@ class Grid(object):
     # index by x then y (column then row)
     def set_xy_cell(self, x, y, value):
         self.grid[y][x] = value
-=======
-    def set_rc_cell(self, row, col, value):
-        self.grid[row][col] = value
 
     def get_rc_cell(self, row, col):
         return self.grid[row][col]
@@ -156,7 +152,6 @@ class Grid(object):
             for boxcol in range(colnum, colnum + side_length):
                 _box.append(self.get_rc_cell(boxrow, boxcol))
         return _box
->>>>>>> f322bb473004972fe3a3547b008f4c072e357fa8
 
 
 class Puzzle(Grid):

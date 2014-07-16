@@ -72,7 +72,7 @@ class Cell(CandidateSet):
 
         self.clear()    # remove all candidates
         for lsnr in self.value_change_listeners:
-            lsnr.notify_cell_value_changed(self, value)
+            lsnr.notify_cell_set(self, value)
         del self.value_change_listeners[:]
 
     def remove_candidate(self, value):
@@ -89,11 +89,11 @@ class ConstraintGroup:
         for cell in cells:
             cell.add_value_change_listener(self)
 
-    def notify_cell_value_changed(self, changed_cell, new_value):
-        self.cells.remove(changed_cell)
+    def notify_cell_set(self, cell_set, value):
+        self.cells.remove(cell_set)
         for cell in self.cells:
             try:
-                cell.remove_candidate(new_value)
+                cell.remove_candidate(value)
             except SingleCandidate:
                 # list(my_set)[0] grabs any value from a set
                 cell.set_value(list(cell)[0])

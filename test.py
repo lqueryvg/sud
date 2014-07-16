@@ -101,7 +101,7 @@ class TestPuzzle(unittest.TestCase):
         puzzle = Puzzle(2);
         self.assertRaises(PuzzleParseError, puzzle.load_from_string,
             """
-            -- --
+            1- --
             -- --
 
             -- --

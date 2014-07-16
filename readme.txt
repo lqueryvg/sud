@@ -3,44 +3,51 @@ Objectives
 
 - Learning Python OO and TDD
 
-- Write a program which uses the same kinds of techniques that a human might
-  use when solving Soduko puzzles, starting with the simplest techniques first
-  and only applying the more complex techniques if the ones don't work.
+- Use the same techniques a human might use when solving Soduko, starting with
+  the simplest techniques first and only applying the more complex techniques
+  if needed.
 
-- Make the puzzle solver code easy to extend when adding new solving
-  techniques.  I.e. adding a new solving technique should not require changing
-  code for existing techniques.
+- Make the solver code easy to extend when adding new solving techniques.  I.e.
+  adding a new solving technique should not require changing code for existing
+  techniques.
 
 Terminology
 -----------
 
-Cells, Rows, Columns, Boxs
+Cells, Rows, Columns, Boxes
 
-    Each individual puzzle cell contains a value from 1 to 9.
+    Each puzzle cell contains a value from 1 to 9.
     Cells are arranged in a grid of 9 rows and 9 columns.
     The grid is divided into nine non-overlapping 3x3 boxes.
+    Maybe add support for different sized grids (4x4, 9x9, 16x16, etc).
 
 Candidates
 
-    This is the set of possible values for a Cell when the actual cell value is
+    The set of possible values for a Cell when the actual cell value is
     not yet known. When the puzzle is empty, the candidate set for every cell
-    contains the numbers 1 to 9.
+    will be the set of numbers from 1 to 9 inclusive.
 
 Constraint Group
 
-    A row, column or box.  The 9 cells in a constraint group are constrained
-    together because they must contain numbers 1 to 9 without repeats.
+    A grouping of 9 cells in a row, column or box.  The cells in any constraint
+    must contain numbers 1 to 9 without repeats.
 
-    Every cell is a member of more than one constraint group; more specifically
-    every cell is a member of 3 constraint groups: a row, a column and a box.
+    Every cell can be a member of more than one constraint group; more
+    specifically every cell is a member of 3 constraint groups: a row, a column
+    and a box.
 
     When a cell value is known, the value can be removed from the candidates of
-    all other cells in the cell's constraint groups.
+    all other cells in the cell's 3 associated constraint groups.
 
 Listeners
 
-    Each cell has a list of listeners which want to be
-    notified when the cell value is set or it's candidates change.
+    Each cell has a list of listeners need to be notified when the cell value
+    is set or it's candidates change.
+
+    A constraint group will listen for cell values being set to a new known
+    value.  It will then be able to remove the value from the
+    candidates of all other cells in the constraint group.
+    This is how it can prevent duplicate cells in the 
 
     (Might a constraint group also have listeners?)
 
@@ -51,13 +58,17 @@ Indexes (Idea)
     different solving techniques.
 
     For example, to detect Single Position, we could create an index on a
-    constraint group which, for each value not yet found, lists which of the
-    constraint group's cells the value could occur in. Then, as soon as the
-    length of any of those lists is reduced to 1, there can only be one
-    cell which can contain that value, so the position of the value it known.
+    constraint group which, for each value not yet found, lists the cells the
+    value could occur in. Then, as soon as the length of any of those lists is
+    reduced to 1, there can only be one cell which can contain that value, so
+    the position of the value becomes known.
 
     Therefore the index would need to be notified whenever a cell value or its
     candidates change.
+
+    (Perhaps an Index *is* a more general form of a constraint group?  I.e.
+    perhaps a constraint group should be generalised into a single candidate
+    index?)
 
 
 Solving Techniques

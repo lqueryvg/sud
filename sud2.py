@@ -178,7 +178,42 @@ class Puzzle(Grid):
                                                 Cell(range(1, 10)))
         self._add_constraint_groups()
 
-    # TODO add load from file
+    def _load_from_iterable(self, iterable):
+        _row = 0
+        for _line in iterable:
+            import re
+
+            re.sub(r"^\s*", "", _line);     # delete whitespace at start of line
+
+            # skip blank lines
+            if re.search(r"^$", _line):
+                continue
+
+            if (_row > 8):
+                raise PuzzleParseError("Too many rows (" + str(_row) + " > 8)")
+
+            import struct
+            _values = struct.unpack("cccxcccxccc", _line)
+            _col = 0
+
+            for _v in _values:
+                #print "_v = %s" % _v
+                if (_v != '-'):
+                    cell = super(Puzzle, self).get_rc_cell(_row, _col)
+                    cell.set_value(int(_v))
+                _col = _col + 1
+            _row = _row + 1
+        return
+
+    def load_from_string(self, string):
+        self._load_from_iterable(iter(string.splitlines()))
+
+    def load_from_file(self, pathname):
+        self._load_from_iterable(open(pathname))
+
+
+class PuzzleParseError(Exception):
+    pass
 
 
 def loadfile(pathname):
@@ -193,7 +228,7 @@ def loadfile(pathname):
         if re.search(r"^$", _line):
             continue
         if (_row > 8):
-            print "Too many rows (" + str(_row) + " > 8)"
+            raise "Too many rows (" + str(_row) + " > 8)"
             import sys
             sys.exit(1)
         import struct

@@ -94,9 +94,24 @@ class TestGrid(unittest.TestCase):
 
 
 class TestPuzzle(unittest.TestCase):
-    def test_puzzle(self):
+    def test_puzzle_create(self):
         puzzle = Puzzle();
 
+    def test_puzzle_load_from_string(self):
+        puzzle = Puzzle();
+        self.assertRaises(PuzzleParseError, puzzle.load_from_string, """
+-6- 3-- 8-4
+537 -9- ---
+-4- --6 3-7
+
+--- -51 238
+--- --- ---
+713 62- -4-
+
+3-6 4-- -1-
+--- -6- 523
+1-2 --9 -8-
+""")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

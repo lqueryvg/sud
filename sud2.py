@@ -64,11 +64,12 @@ class Cell(CandidateSet):
     def set_value(self, value):
         if self.value is not None:
             raise CellAlreadySet
-        # if value not in self.candidates:
+
         if value not in self:
             raise ValueIsNotACandidate
+
         self.value = value
-        # self.candidates.clear()    # remove all candidates
+
         self.clear()    # remove all candidates
         for lsnr in self.value_change_listeners:
             lsnr.notify_cell_value_changed(self, value)
@@ -94,7 +95,7 @@ class ConstraintGroup:
             try:
                 cell.remove_candidate(new_value)
             except SingleCandidate:
-                # list(my_set)[0] grabs any value from set
+                # list(my_set)[0] grabs any value from a set
                 cell.set_value(list(cell)[0])
 
 
@@ -157,93 +158,92 @@ class Grid(object):
 class Puzzle(Grid):
 
     def _add_constraint_groups(self):
-        for rownum in range(9):
+        for rownum in range(self.numrows):
             _row = super(Puzzle, self).get_row(rownum)
             dummy = ConstraintGroup(_row)
 
-        for colnum in range(9):
+        for colnum in range(self.numcols):
             _col = super(Puzzle, self).get_col(colnum)
             dummy = ConstraintGroup(_col)
 
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
-                _box = super(Puzzle, self).get_box(
-                    boxrow, boxcol, self.box_width
-                )
+                _box = super(Puzzle, self).get_box(boxrow, boxcol)
                 dummy = ConstraintGroup(_box)
 
     def __init__(self, box_width):
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
-                super(Puzzle, self).set_rc_cell(rownum, colnum,
-                                                Cell(range(1, 10)))
+                super(Puzzle, self).set_rc_cell(
+                    rownum, colnum, Cell(range(1, self.numrows + 1))
+                )
         self._add_constraint_groups()
 
-    def _load_from_iterable(self, iterable):
+    def load_from_iterable(self, iterable):
         _row = 0
+        _box_width = 0
         for _line in iterable:
+            if (_row >= self.numrows):
+                raise PuzzleParseError(
+                        'Row {}: Too many rows, expected {}.'.format(
+                            _row, self.numrows)
+                        )
+
             import re
 
-            re.sub(r"^\s*", "", _line);     # delete whitespace at start of line
+            # support script style comments with '#'
+            re.sub(r"#.*$", '', _line)  # strip them
 
-            # skip blank lines
-            if re.search(r"^$", _line):
-                continue
+            # Each line is split into words.
+            # Each word represents a row of a box and since
+            # all boxes should be the same width, each word
+            # should be the same number of characters.
+            _box_words = _line.split()
+            _num_box_words = len(_box_words)
 
-            if (_row > 8):
-                raise PuzzleParseError("Too many rows (" + str(_row) + " > 8)")
+            if _num_box_words == 0:
+                continue        # skip blank lines
 
-            import struct
-            _values = struct.unpack("cccxcccxccc", _line)
-            _col = 0
+            if _num_box_words != self.box_width:
+                raise PuzzleParseError(
+                    'Row {}: number of words ({}) must '
+                    + 'match box width ({}).'.format(
+                        _row, _num_box_words, self.box_width
+                ))
 
-            for _v in _values:
-                #print "_v = %s" % _v
-                if (_v != '-'):
-                    cell = super(Puzzle, self).get_rc_cell(_row, _col)
-                    cell.set_value(int(_v))
-                _col = _col + 1
+            for _word in _box_words:
+                if len(_word) != self.box_width:
+                    raise PuzzleParseError(
+                        'Row {}: length of word "{}" ({}) must match '
+                        + 'box width ({})'.format(
+                            _row, _word, len(_word), self.box_width
+                    ))
+
+                import struct
+                _values = struct.unpack('c' * self.box_width, _word)
+                _col = 0
+
+                for _v in _values:
+                    #print "_v = %s" % _v
+                    if (_v != '-'):
+                        cell = super(Puzzle, self).get_rc_cell(_row, _col)
+                        cell.set_value(int(_v))
+                    _col = _col + 1
+
             _row = _row + 1
         return
 
     def load_from_string(self, string):
-        self._load_from_iterable(iter(string.splitlines()))
+        self.load_from_iterable(iter(string.splitlines()))
 
     def load_from_file(self, pathname):
-        self._load_from_iterable(open(pathname))
+        self.load_from_iterable(open(pathname))
 
 
 class PuzzleParseError(Exception):
     pass
 
 
-def loadfile(pathname):
-
-    # Empty rows are skipped.
-    # One line per row.
-    # One character per column with
-    _file = open(pathname)
-    _row = 0
-    for _line in _file:
-        import re
-        if re.search(r"^$", _line):
-            continue
-        if (_row > 8):
-            raise "Too many rows (" + str(_row) + " > 8)"
-            import sys
-            sys.exit(1)
-        import struct
-        _values = struct.unpack("cccxcccxcccx", _line)
-        _col = 0
-        # TODO: detect errors on input
-        for _v in _values:
-            # print "_v = %s" % _v
-            if (_v != '-'):
-                # set_cell(_col, _row,int(_v))
-                pass
-            _col = _col + 1
-        _row = _row + 1
-    return
-
 # The End
+# vim:foldmethod=indent:foldnestmax=2

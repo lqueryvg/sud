@@ -73,7 +73,7 @@ class TestConstraintGroup(unittest.TestCase):
 
 class TestGrid(unittest.TestCase):
     def test_grid_rc(self):
-        grid = Grid(2, 2)
+        grid = Grid(2)
         grid.set_rc_cell(0, 0, 1)
         grid.set_rc_cell(0, 1, 2)
         grid.set_rc_cell(1, 0, 3)
@@ -84,34 +84,30 @@ class TestGrid(unittest.TestCase):
         self.assertTrue(grid.get_rc_cell(1, 1) == 4)
 
     def test_get_box(self):
-        grid = Grid(2, 2)
+        grid = Grid(2)
         grid.set_rc_cell(0, 0, 1)
         grid.set_rc_cell(0, 1, 2)
         grid.set_rc_cell(1, 0, 3)
         grid.set_rc_cell(1, 1, 4)
-        box = grid.get_box(0, 0, 2)
+        box = grid.get_box(0, 0)
         self.assertTrue(len(box) == 4)
 
 
 class TestPuzzle(unittest.TestCase):
     def test_puzzle_create(self):
-        puzzle = Puzzle();
+        puzzle = Puzzle(2);
 
     def test_puzzle_load_from_string(self):
-        puzzle = Puzzle();
-        self.assertRaises(PuzzleParseError, puzzle.load_from_string, """
--6- 3-- 8-4
-537 -9- ---
--4- --6 3-7
+        puzzle = Puzzle(2);
+        self.assertRaises(PuzzleParseError, puzzle.load_from_string,
+            """
+            -- --
+            -- --
 
---- -51 238
---- --- ---
-713 62- -4-
-
-3-6 4-- -1-
---- -6- 523
-1-2 --9 -8-
-""")
+            -- --
+            -- --
+            """
+            )
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

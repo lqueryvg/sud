@@ -97,28 +97,33 @@ class ConstraintGroup:
                 # list(my_set)[0] grabs any value from set
                 cell.set_value(list(cell)[0])
 
+
 class SinglePositionIndex:
     def __init__(self, cgrp):
         # Create a dictionary of possible cells
         # for each possible value in a constraint group.
         # I.e. a dictionary of lists of cells indexed by candidate values.
         raise AssertionError("Not implemented yet")     # TODO
-        #self.value_cells = 
+        # self.value_cells =
         for cell in cgrp.cells:
             cell.add_candidate_change_listener(self)
+
 
 class Grid(object):
     def __init__(self, numrows, numcols):
 
         # list of lists, as [row][col]
         # coords start at 0
-        self.grid = [[]]   
+        self.grid = []
+        self.numrows = numrows
+        self.numcols = numcols
         for rownum in range(numrows):
-            column = []
+            row = []
             for colnum in range(numcols):
-                column.append(None)
-            self.grid.append(column)
+                row.append(None)
+            self.grid.append(row)
 
+<<<<<<< HEAD
     # index by row then column
     def set_rc_cell(self, row, col, value):
         self.grid[row][col] = value
@@ -126,14 +131,57 @@ class Grid(object):
     # index by x then y (column then row)
     def set_xy_cell(self, x, y, value):
         self.grid[y][x] = value
+=======
+    def set_rc_cell(self, row, col, value):
+        self.grid[row][col] = value
+
+    def get_rc_cell(self, row, col):
+        return self.grid[row][col]
+
+    def get_row(self, rownum):
+        _row = []
+        for colnum in range(self.numcols):
+            _row.append(self.get_rc_cell(rownum, colnum))
+        return _row
+
+    def get_col(self, colnum):
+        _col = []
+        for rownum in range(self.numrows):
+            _col.append(self.get_rc_cell(rownum, colnum))
+        return _col
+
+    def get_box(self, rownum, colnum, side_length):
+        _box = []
+        for boxrow in range(rownum, rownum + side_length):
+            for boxcol in range(colnum, colnum + side_length):
+                _box.append(self.get_rc_cell(boxrow, boxcol))
+        return _box
+>>>>>>> f322bb473004972fe3a3547b008f4c072e357fa8
 
 
 class Puzzle(Grid):
+
+    def _add_constraint_groups(self):
+        for rownum in range(9):
+            _row = super(Puzzle, self).get_row(rownum)
+            dummy = ConstraintGroup(_row)
+
+        for colnum in range(9):
+            _col = super(Puzzle, self).get_col(colnum)
+            dummy = ConstraintGroup(_col)
+
+        for boxrow in [0, 3, 6]:
+            for boxcol in [0, 3, 6]:
+                _box = super(Puzzle, self).get_box(boxrow, boxcol, 3)
+                dummy = ConstraintGroup(_box)
+
     def __init__(self):
         super(Puzzle, self).__init__(9, 9)
-        for x in range(9):
-            for y in range(9):
-                self.set_xy_cell = Cell(range(1,10))
+        for rownum in range(9):
+            for colnum in range(9):
+                super(Puzzle, self).set_rc_cell(rownum, colnum,
+                                                Cell(range(1, 10)))
+        self._add_constraint_groups()
 
     # TODO add load from file
 
@@ -146,20 +194,24 @@ def loadfile(pathname):
     _file = open(pathname)
     _row = 0
     for _line in _file:
+        import re
         if re.search(r"^$", _line):
             continue
         if (_row > 8):
             print "Too many rows (" + str(_row) + " > 8)"
+            import sys
             sys.exit(1)
-        _values = struct.unpack("cccxcccxcccx", _line);
+        import struct
+        _values = struct.unpack("cccxcccxcccx", _line)
         _col = 0
         # TODO: detect errors on input
         for _v in _values:
-            #print "_v = %s" % _v
+            # print "_v = %s" % _v
             if (_v != '-'):
-                set_cell(_col,_row,int(_v))
+                # set_cell(_col, _row,int(_v))
+                pass
             _col = _col + 1
         _row = _row + 1
     return
-    
+
 # The End

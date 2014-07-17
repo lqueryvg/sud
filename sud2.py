@@ -47,9 +47,10 @@ class ValueIsNotACandidate(Exception):
 
 
 class Cell(CandidateSet):
-    def __init__(self, candidate_values):
+    def __init__(self, candidate_values, name=""):
         super(Cell, self).__init__(candidate_values)
         self.value = None
+        self.name = name
         self.value_change_listeners = []
         self.candidate_removed_listeners = []
 
@@ -64,7 +65,7 @@ class Cell(CandidateSet):
 
     def set_value(self, value):
         if self.value is not None:
-            raise CellAlreadySet
+            return
 
         if value not in self:
             raise ValueIsNotACandidate
@@ -83,7 +84,10 @@ class Cell(CandidateSet):
 
 
 class ConstraintGroup:
-    def __init__(self, cells):
+    def __init__(self, cells, puzzle=None):
+        # Optionally point back to the puzzle
+        self.puzzle = puzzle
+
         self.cells = cells
 
         # Point each cell back to this constraint group
@@ -103,6 +107,10 @@ class ConstraintGroup:
                 except SingleCandidate:
                     # list(my_set)[0] grabs any value from a set
                     cell.set_value(list(cell)[0])
+                    if self.puzzle is not None:
+                        self.puzzle.logit(
+                                "SingleCandidate Cell {} value is {}".format(
+                                    cell.name, cell.value))
 
 
 class SinglePositionIndex:
@@ -163,26 +171,32 @@ class Grid(object):
 
 class Puzzle(Grid):
 
+    def logit(self, string):
+        #print "log " + string
+        self.log.append(string)
+
     def _add_constraint_groups(self):
         for rownum in range(self.numrows):
             _row = super(Puzzle, self).get_row(rownum)
-            dummy = ConstraintGroup(_row)
+            dummy = ConstraintGroup(_row, self)
 
         for colnum in range(self.numcols):
             _col = super(Puzzle, self).get_col(colnum)
-            dummy = ConstraintGroup(_col)
+            dummy = ConstraintGroup(_col, self)
 
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
                 _box = super(Puzzle, self).get_box(boxrow, boxcol)
-                dummy = ConstraintGroup(_box)
+                dummy = ConstraintGroup(_box, self)
 
     def __init__(self, box_width):
+        self.log = []
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
                 super(Puzzle, self).set_rc_cell(
-                    rownum, colnum, Cell(range(1, self.numrows + 1))
+                    rownum, colnum, Cell(range(1, self.numrows + 1),
+                        "{}{}".format(rownum, colnum))
                 )
         self._add_constraint_groups()
 
@@ -220,6 +234,7 @@ class Puzzle(Grid):
                 ))
 
 
+            _col = 0
             for _word in _box_words:
                 if len(_word) != self.box_width:
                     raise PuzzleParseError(
@@ -230,7 +245,6 @@ class Puzzle(Grid):
 
                 import struct
                 _values = struct.unpack('c' * self.box_width, _word)
-                _col = 0
 
                 for _v in _values:
                     #print "_v = %s" % _v

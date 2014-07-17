@@ -107,8 +107,18 @@ class TestPuzzle(unittest.TestCase):
                 'length of word .* must match box width',
                 puzzle.load_from_string, ('a b')
                 )
-        #puzzle.load_from_string("a b")
+        self.assertRaisesRegexp(PuzzleParseError,
+                'too many rows',
+                puzzle.load_from_string,
+                """
+                    -- --
+                    -- --
 
+                    -- --
+                    -- --
+
+                    -- --
+                """)
 
     def test_simple_puzzle(self):
         puzzle = Puzzle(2);

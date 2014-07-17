@@ -207,7 +207,7 @@ class Puzzle(Grid):
 
             if (_row >= self.numrows):
                 raise PuzzleParseError(
-                        'Row {}: Too many rows, expected {}.'.format(
+                        'Row {}: too many rows, expected {}.'.format(
                             _row, self.numrows)
                         )
 

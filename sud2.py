@@ -190,12 +190,6 @@ class Puzzle(Grid):
         _row = 0
         _box_width = 0
         for _line in iterable:
-            if (_row >= self.numrows):
-                raise PuzzleParseError(
-                        'Row {}: Too many rows, expected {}.'.format(
-                            _row, self.numrows)
-                        )
-
             import re
 
             # support script style comments with '#'
@@ -211,19 +205,27 @@ class Puzzle(Grid):
             if _num_box_words == 0:
                 continue        # skip blank lines
 
-            if _num_box_words != self.box_width:
+            if (_row >= self.numrows):
                 raise PuzzleParseError(
-                    'Row {}: number of words ({}) must '
-                    + 'match box width ({}).'.format(
-                        _row, _num_box_words, self.box_width
+                        'Row {}: Too many rows, expected {}.'.format(
+                            _row, self.numrows)
+                        )
+
+            if _num_box_words != self.box_width:
+#                import pdb; pdb.set_trace()
+                raise PuzzleParseError(
+                    ('Row {}: expect {} words (one per box); '
+                    + 'found {}.').format(
+                        _row, self.box_width, _num_box_words
                 ))
+
 
             for _word in _box_words:
                 if len(_word) != self.box_width:
                     raise PuzzleParseError(
-                        'Row {}: length of word "{}" ({}) must match '
-                        + 'box width ({})'.format(
-                            _row, _word, len(_word), self.box_width
+                        ('Row {}: text = "{}", length of word "{}" is {}, '
+                            + 'but must match box width {}').format(
+                            _row, _line, _word, len(_word), self.box_width
                     ))
 
                 import struct

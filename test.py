@@ -97,9 +97,22 @@ class TestPuzzle(unittest.TestCase):
     def test_puzzle_create(self):
         puzzle = Puzzle(2);
 
-    def test_puzzle_load_from_string(self):
+    def test_puzzle_parse_error(self):
         puzzle = Puzzle(2);
-        self.assertRaises(PuzzleParseError, puzzle.load_from_string,
+        self.assertRaisesRegexp(PuzzleParseError,
+                'expect \w* words \(one per box\)',
+                puzzle.load_from_string, ('wibble')
+                )
+        self.assertRaisesRegexp(PuzzleParseError,
+                'length of word .* must match box width',
+                puzzle.load_from_string, ('a b')
+                )
+        #puzzle.load_from_string("a b")
+
+
+    def test_simple_puzzle(self):
+        puzzle = Puzzle(2);
+        puzzle.load_from_string(
             """
             1- --
             -- --

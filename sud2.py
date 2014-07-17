@@ -84,9 +84,10 @@ class Cell(CandidateSet):
 
 
 class ConstraintGroup:
-    def __init__(self, cells, puzzle=None):
+    def __init__(self, cells, puzzle=None, name=""):
         # Optionally point back to the puzzle
         self.puzzle = puzzle
+        self.name = name
 
         self.cells = cells
 
@@ -103,6 +104,10 @@ class ConstraintGroup:
             # already there, otherwise we'll get a key error.
             if value in cell:
                 try:
+                    if self.puzzle is not None:
+                        self.puzzle.logit(
+                                "{} RemoveCandidate {} from {}".format(
+                                    self.name, value, cell.name))
                     cell.remove_candidate(value)
                 except SingleCandidate:
                     # list(my_set)[0] grabs any value from a set
@@ -178,16 +183,18 @@ class Puzzle(Grid):
     def _add_constraint_groups(self):
         for rownum in range(self.numrows):
             _row = super(Puzzle, self).get_row(rownum)
-            dummy = ConstraintGroup(_row, self)
+            dummy = ConstraintGroup(_row, self, name="Row"+str(rownum))
 
         for colnum in range(self.numcols):
             _col = super(Puzzle, self).get_col(colnum)
-            dummy = ConstraintGroup(_col, self)
+            dummy = ConstraintGroup(_col, self, name="Col"+str(colnum))
 
+        boxnum = 0
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
                 _box = super(Puzzle, self).get_box(boxrow, boxcol)
-                dummy = ConstraintGroup(_box, self)
+                dummy = ConstraintGroup(_box, self, name="Box"+str(boxnum))
+                boxnum = boxnum + 1
 
     def __init__(self, box_width):
         self.log = []
@@ -196,13 +203,12 @@ class Puzzle(Grid):
             for colnum in range(self.numcols):
                 super(Puzzle, self).set_rc_cell(
                     rownum, colnum, Cell(range(1, self.numrows + 1),
-                        "{}{}".format(rownum, colnum))
+                        name="Cell{}{}".format(rownum, colnum))
                 )
         self._add_constraint_groups()
 
     def load_from_iterable(self, iterable):
         _row = 0
-        _box_width = 0
         for _line in iterable:
             import re
 
@@ -226,7 +232,7 @@ class Puzzle(Grid):
                         )
 
             if _num_box_words != self.box_width:
-#                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 raise PuzzleParseError(
                     ('Row {}: expect {} words (one per box); '
                     + 'found {}.').format(
@@ -247,7 +253,6 @@ class Puzzle(Grid):
                 _values = struct.unpack('c' * self.box_width, _word)
 
                 for _v in _values:
-                    #print "_v = %s" % _v
                     if (_v != '-'):
                         cell = super(Puzzle, self).get_rc_cell(_row, _col)
                         #import pdb; pdb.set_trace()

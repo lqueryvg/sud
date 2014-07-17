@@ -33,6 +33,7 @@ class CandidateSet(set):
         if len(self) == 1:
             raise RemoveOnlyCandidate
         super(CandidateSet, self).remove(value)
+
         if len(self) == 1:
             raise SingleCandidate
 
@@ -92,11 +93,16 @@ class ConstraintGroup:
     def notify_cell_set(self, cell_set, value):
         self.cells.remove(cell_set)
         for cell in self.cells:
-            try:
-                cell.remove_candidate(value)
-            except SingleCandidate:
-                # list(my_set)[0] grabs any value from a set
-                cell.set_value(list(cell)[0])
+            # It's possible that an over-lapping contstraint
+            # group has already deleted the candidate value
+            # from this cell, so only remove candidate if
+            # already there, otherwise we'll get a key error.
+            if value in cell:
+                try:
+                    cell.remove_candidate(value)
+                except SingleCandidate:
+                    # list(my_set)[0] grabs any value from a set
+                    cell.set_value(list(cell)[0])
 
 
 class SinglePositionIndex:
@@ -228,6 +234,7 @@ class Puzzle(Grid):
                     #print "_v = %s" % _v
                     if (_v != '-'):
                         cell = super(Puzzle, self).get_rc_cell(_row, _col)
+                        #import pdb; pdb.set_trace()
                         cell.set_value(int(_v))
                     _col = _col + 1
 

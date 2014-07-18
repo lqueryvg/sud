@@ -32,11 +32,11 @@ class Cell(CandidateSet):
         super(Cell, self).__init__(candidate_values)
         self.value = None
         self.name = name
-        self.value_change_listeners = []
+        self.cell_value_set_listeners = []
         self.candidate_removed_listeners = []
 
     def add_cell_value_set_listener(self, lsnr):
-        self.value_change_listeners.append(lsnr)
+        self.cell_value_set_listeners.append(lsnr)
 
     def add_cell_candidate_removed_listener(self, lsnr):
         self.candidate_removed_listeners.append(lsnr)
@@ -54,9 +54,9 @@ class Cell(CandidateSet):
         self.value = value
 
         self.clear()    # remove all candidates
-        for lsnr in self.value_change_listeners:
+        for lsnr in self.cell_value_set_listeners:
             lsnr.notify_cell_value_set(self, value)
-        del self.value_change_listeners[:]
+        del self.cell_value_set_listeners[:]
 
     def remove_candidate(self, value):
         super(Cell, self).remove_candidate(value)
@@ -127,7 +127,6 @@ class SinglePositionIndex:
 
     def notify_cell_candidate_removed(self, cell, value):
             raise AssertionError("Not implemented yet")     # TODO
-
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not

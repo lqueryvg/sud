@@ -41,19 +41,25 @@ Constraint Group
 
 Listeners
 
-    Each cell has a list of listeners wanting notification whenever a cell
-    state changes.
+    Each cell has a 2 lists of listeners waiting for notifications.
+    There are two types of listener/notifications are:
     
-    There are two types of notification:
-    
-    1. Cell value has been set
-    2. A cell candidate has been removed.
-    
-    A constraint group will listen for cell values being set 
-    so that it can remove the value from the
-    candidates of all other cells in the constraint group.
-    
-    Is a constraint group also have listeners?)
+    1. Cell candidate removed.
+
+        The SingleCandidate class (and others) will need to listen for this.
+        If a cell's the penultimate candidate is removed, SingleCandidate will
+        need to set the cell's value to the only remaining candidate.
+
+    2. Cell value set.
+
+        A ConstraintGroup will need to listen for cell values being set so it
+        can remove the value from the candidates of all other cells in the
+        group.
+
+        Once a cell value is set, the value set listeners are first notified
+        then both listener lists and the candidate lists are cleared (since
+        there cen be no further changes to this cell).
+        
 
 Indexes (Idea)
 

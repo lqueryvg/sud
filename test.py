@@ -7,11 +7,13 @@ import unittest
 
 class TestCandidateSet(unittest.TestCase):
     def test_constructor_zero_elements(self):
-        self.assertRaises(AtLeastTwoCandidateValuesRequired,
+        self.assertRaisesRegexp(AssertionError,
+                'At least two candidates required',
                           CandidateSet, [])
 
     def test_constructor_one_element(self):
-        self.assertRaises(AtLeastTwoCandidateValuesRequired,
+        self.assertRaisesRegexp(AssertionError,
+                'At least two candidates required',
                           CandidateSet, ["one"])
 
     def test_remove_candidate(self):
@@ -44,14 +46,11 @@ class TestCell(unittest.TestCase):
         cell.set_value(1)
         self.assertTrue(cell.get_value() == 1)
 
-#    def test_set_value_already_set(self):
-#        cell = Cell([1, 2, 3])
-#        cell.set_value(1)
-#        self.assertRaises(CellAlreadySet, cell.set_value, 1)
-
     def test_set_value_not_a_candidate(self):
         cell = Cell([1, 2])
-        self.assertRaises(ValueIsNotACandidate, cell.set_value, 3)
+        self.assertRaisesRegexp(AssertionError,
+                'Value is not a candidate',
+                          cell.set_value, 3)
 
     def test_remove_candidate(self):
         # Check inheritance works

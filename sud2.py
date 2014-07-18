@@ -5,12 +5,6 @@ class SingleCandidate(Exception):
     # Only one candidate remains after remove.
     pass
 
-
-class AtLeastTwoCandidateValuesRequired(Exception):
-    # Need at least two or more candidate values to create a CandidateSet
-    pass
-
-
 class CandidateSet(set):
     # Like a Set but raises exceptions when:
     # - trying to remove final element
@@ -21,24 +15,16 @@ class CandidateSet(set):
     # Specialised code.
     def __init__(self, candidate_values):
         if len(candidate_values) < 2:
-            raise AtLeastTwoCandidateValuesRequired
+            raise AssertionError("At least two candidates required")
         super(CandidateSet, self).__init__(candidate_values)
 
     def remove_candidate(self, value):
         if len(self) == 1:
-            raise AssertionError("Not implemented yet")     # TODO
+            raise AssertionError("Attempt to remove final candidate")
         super(CandidateSet, self).remove(value)
 
         if len(self) == 1:
             raise SingleCandidate
-
-
-class CellAlreadySet(Exception):
-    pass
-
-
-class ValueIsNotACandidate(Exception):
-    pass
 
 
 class Cell(CandidateSet):
@@ -63,7 +49,7 @@ class Cell(CandidateSet):
             return
 
         if value not in self:
-            raise ValueIsNotACandidate
+            raise AssertionError("Value is not a candidate")
 
         self.value = value
 

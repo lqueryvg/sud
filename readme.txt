@@ -41,8 +41,11 @@ Constraint Group
 
 Listeners
 
-    Each cell has a 2 lists of listeners waiting for notifications.
-    There are two types of listener/notifications are:
+    Each cell has the ability to 2 lists of listeners waiting for notifications.
+    There are 2 types of notification. Each list is for 
+    Each list is for listeners 
+    , one list for
+    each type of n
     
     1. Cell candidate removed.
 
@@ -59,7 +62,13 @@ Listeners
         Once a cell value is set, the value set listeners are first notified
         then both listener lists and the candidate lists are cleared (since
         there cen be no further changes to this cell).
-        
+
+        Note that candidate removed listeners are *not* called when the
+        candidate list is cleared in this situation, because (for example) if
+        there are 4 candidates and 5 candidate remove listeners, we would have
+        to call each listener once for each candidate being removed, i.e. 4 x 5
+        = 20 calls.  It is therefore expected that a class interested in cell
+        candidates removals also listens for cell values being set.
 
 Indexes (Idea)
 

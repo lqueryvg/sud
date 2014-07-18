@@ -41,15 +41,19 @@ Constraint Group
 
 Listeners
 
-    Each cell has a list of listeners need to be notified when the cell value
-    is set or it's candidates change.
-
-    A constraint group will listen for cell values being set to a new known
-    value.  It will then be able to remove the value from the
+    Each cell has a list of listeners wanting notification whenever a cell
+    state changes.
+    
+    There are two types of notification:
+    
+    1. Cell value has been set
+    2. A cell candidate has been removed.
+    
+    A constraint group will listen for cell values being set 
+    so that it can remove the value from the
     candidates of all other cells in the constraint group.
-    This is how it can prevent duplicate cells in the 
-
-    (Might a constraint group also have listeners?)
+    
+    Is a constraint group also have listeners?)
 
 Indexes (Idea)
 
@@ -100,8 +104,8 @@ Medium Techniques
 
 Candidate Lines (TODO)
 
-    When the only candidates for a particular value in a box lie on a line,
-    therefore the same value candidates on same line in other boxes can be
+    When the only candidates for a value in a box lie on a line,
+    therefore the same value in other boxes on the same line can be
     eliminated.
 
     These could be found by creating an index for each box which lists the
@@ -110,3 +114,19 @@ Candidate Lines (TODO)
     of cells in other boxes in the same row/column, and the row/column index
     for that value can be deleted (since it's served its purpose).
 
+Random Thoughts
+---------------
+(Chronological Order)
+
+    Would be nice to have more control over when the solving takes
+    place. At the moment it happens recursively, so just setting
+    a cell could cause solving to occur.
+
+    Perhaps setting a cell values should not also trigger candidate
+    removal in constraint groups, and everything should be done
+    via listeners.
+
+    So, SingleCandidate can be an object associated with every
+    cell (which doesn't have a value set) which listens for candidate
+    removals. When the last candidate has been removed, it sets the cells
+    value.

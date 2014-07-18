@@ -6,11 +6,6 @@ class SingleCandidate(Exception):
     pass
 
 
-class RemoveOnlyCandidate(Exception):
-    # An attempt to remove the only candidate
-    pass
-
-
 class AtLeastTwoCandidateValuesRequired(Exception):
     # Need at least two or more candidate values to create a CandidateSet
     pass
@@ -31,7 +26,7 @@ class CandidateSet(set):
 
     def remove_candidate(self, value):
         if len(self) == 1:
-            raise RemoveOnlyCandidate
+            raise AssertionError("Not implemented yet")     # TODO
         super(CandidateSet, self).remove(value)
 
         if len(self) == 1:
@@ -54,10 +49,10 @@ class Cell(CandidateSet):
         self.value_change_listeners = []
         self.candidate_removed_listeners = []
 
-    def add_value_change_listener(self, lsnr):
+    def add_cell_value_set_listener(self, lsnr):
         self.value_change_listeners.append(lsnr)
 
-    def add_candidate_change_listener(self, lsnr):
+    def add_cell_candidate_removed_listener(self, lsnr):
         self.candidate_removed_listeners.append(lsnr)
 
     def get_value(self):
@@ -74,7 +69,7 @@ class Cell(CandidateSet):
 
         self.clear()    # remove all candidates
         for lsnr in self.value_change_listeners:
-            lsnr.notify_cell_set(self, value)
+            lsnr.notify_cell_value_set(self, value)
         del self.value_change_listeners[:]
 
     def remove_candidate(self, value):
@@ -93,9 +88,9 @@ class ConstraintGroup:
 
         # Point each cell back to this constraint group
         for cell in cells:
-            cell.add_value_change_listener(self)
+            cell.add_cell_value_set_listener(self)
 
-    def notify_cell_set(self, cell_set, value):
+    def notify_cell_value_set(self, cell_set, value):
         self.cells.remove(cell_set)
         for cell in self.cells:
             # It's possible that an over-lapping contstraint
@@ -103,11 +98,11 @@ class ConstraintGroup:
             # from this cell, so only remove candidate if
             # already there, otherwise we'll get a key error.
             if value in cell:
+                if self.puzzle is not None:
+                    self.puzzle.logit(
+                            "{} RemoveCandidate {} from {}".format(
+                                self.name, value, cell.name))
                 try:
-                    if self.puzzle is not None:
-                        self.puzzle.logit(
-                                "{} RemoveCandidate {} from {}".format(
-                                    self.name, value, cell.name))
                     cell.remove_candidate(value)
                 except SingleCandidate:
                     # list(my_set)[0] grabs any value from a set
@@ -117,17 +112,42 @@ class ConstraintGroup:
                                 "SingleCandidate Cell {} value is {}".format(
                                     cell.name, cell.value))
 
+    def notify_cell_candidate_removed(self, value):
+        # Constraint group is not interested in candidate removals.
+        pass
 
 class SinglePositionIndex:
     def __init__(self, cgrp):
         # Create a dictionary of possible cells
         # for each possible value in a constraint group.
         # I.e. a dictionary of lists of cells indexed by candidate values.
-        raise AssertionError("Not implemented yet")     # TODO
+    
+        self.index = {}
+        for cell in cgrp.cells:
+            if cell.value is not None:
+                for candidate_value in cell:
+                    if candidate_value in self.index:
+                        self.index.get(candidate_value).append(cell)
+                    else:
+                        self.index[candidate_value] = [cell]
+
         # self.value_cells =
         for cell in cgrp.cells:
-            cell.add_candidate_change_listener(self)
+            cell.add_cell_candidate_removed_listener(self)
+            cell.add_cell_value_set_listener(self)
 
+    def notify_cell_value_set(self, cell_set, value):
+            raise AssertionError("Not implemented yet")     # TODO
+
+    def notify_cell_candidate_removed(self, cell, value):
+            raise AssertionError("Not implemented yet")     # TODO
+
+
+
+# Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
+# to be confused with Cell values) and provides a way of accessing them
+# individually or as groups (rows, columns or boxes).  It just so happens that
+# when used by the Puzzle, the grid values are references to Cell objects.
 
 class Grid(object):
     def __init__(self, box_width):
@@ -144,37 +164,36 @@ class Grid(object):
             self.grid.append(row)
 
     # index by row then column
-    def set_rc_cell(self, row, col, value):
+    def set_grid_rc_value(self, row, col, value):
         self.grid[row][col] = value
 
-    # index by x then y (column then row)
-    def set_xy_cell(self, x, y, value):
-        self.grid[y][x] = value
-
-    def get_rc_cell(self, row, col):
+    def get_grid_rc_value(self, row, col):
         return self.grid[row][col]
 
     def get_row(self, rownum):
         _row = []
         for colnum in range(self.numcols):
-            _row.append(self.get_rc_cell(rownum, colnum))
+            _row.append(self.get_grid_rc_value(rownum, colnum))
         return _row
 
     def get_col(self, colnum):
         _col = []
         for rownum in range(self.numrows):
-            _col.append(self.get_rc_cell(rownum, colnum))
+            _col.append(self.get_grid_rc_value(rownum, colnum))
         return _col
 
     def get_box(self, rownum, colnum):
         _box = []
         for boxrow in range(rownum, rownum + self.box_width):
             for boxcol in range(colnum, colnum + self.box_width):
-                _box.append(self.get_rc_cell(boxrow, boxcol))
+                _box.append(self.get_grid_rc_value(boxrow, boxcol))
         return _box
 
 
 class Puzzle(Grid):
+
+    def add_index():
+        raise AssertionError("Not implemented yet")     # TODO
 
     def logit(self, string):
         #print "log " + string
@@ -183,17 +202,17 @@ class Puzzle(Grid):
     def _add_constraint_groups(self):
         for rownum in range(self.numrows):
             _row = super(Puzzle, self).get_row(rownum)
-            dummy = ConstraintGroup(_row, self, name="Row"+str(rownum))
+            ConstraintGroup(_row, self, name="Row"+str(rownum))
 
         for colnum in range(self.numcols):
             _col = super(Puzzle, self).get_col(colnum)
-            dummy = ConstraintGroup(_col, self, name="Col"+str(colnum))
+            ConstraintGroup(_col, self, name="Col"+str(colnum))
 
         boxnum = 0
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
                 _box = super(Puzzle, self).get_box(boxrow, boxcol)
-                dummy = ConstraintGroup(_box, self, name="Box"+str(boxnum))
+                ConstraintGroup(_box, self, name="Box"+str(boxnum))
                 boxnum = boxnum + 1
 
     def __init__(self, box_width):
@@ -201,7 +220,7 @@ class Puzzle(Grid):
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
-                super(Puzzle, self).set_rc_cell(
+                super(Puzzle, self).set_grid_rc_value(
                     rownum, colnum, Cell(range(1, self.numrows + 1),
                         name="Cell{}{}".format(rownum, colnum))
                 )
@@ -254,7 +273,7 @@ class Puzzle(Grid):
 
                 for _v in _values:
                     if (_v != '-'):
-                        cell = super(Puzzle, self).get_rc_cell(_row, _col)
+                        cell = super(Puzzle, self).get_grid_rc_value(_row, _col)
                         #import pdb; pdb.set_trace()
                         cell.set_value(int(_v))
                     _col = _col + 1

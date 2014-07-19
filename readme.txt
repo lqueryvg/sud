@@ -73,8 +73,8 @@ Listeners
 Indexes (Idea)
 
     Indexes are like constraint groups in that they store data about
-    candidates, with a view to detecting certain types of conditions for
-    different solving techniques.
+    candidates, with a view to detecting conditions for different solving
+    techniques.
 
     For example, to detect Single Position, we could create an index on a
     constraint group which, for each value not yet found, lists the cells the

@@ -44,6 +44,12 @@ class Cell(CandidateSet):
     def get_value(self):
         return self.value
 
+    def __str__(self):
+        if self.value == None:
+            return "-"
+        else:
+            return str(self.value)
+
     def set_value(self, value):
         if self.value is not None:
             return
@@ -55,13 +61,13 @@ class Cell(CandidateSet):
 
         self.clear()    # remove all candidates
         for lsnr in self.cell_value_set_listeners:
-            lsnr.notify_cell_value_set(self, value)
+            lsnr.cell_value_set_notification(self, value)
         del self.cell_value_set_listeners[:]
 
     def remove_candidate(self, value):
         super(Cell, self).remove_candidate(value)
         for lsnr in self.candidate_removed_listeners:
-            lsnr.notify_cell_candidate_removed(self, value)
+            lsnr.cell_candidate_removed_notification(self, value)
 
 
 class ConstraintGroup:
@@ -72,11 +78,11 @@ class ConstraintGroup:
 
         self.cells = cells
 
-        # Point each cell back to this constraint group
+        # listen to cells for value set
         for cell in cells:
             cell.add_cell_value_set_listener(self)
 
-    def notify_cell_value_set(self, cell_set, value):
+    def cell_value_set_notification(self, cell_set, value):
         self.cells.remove(cell_set)
         for cell in self.cells:
             # It's possible that an over-lapping contstraint
@@ -95,38 +101,48 @@ class ConstraintGroup:
                     cell.set_value(list(cell)[0])
                     if self.puzzle is not None:
                         self.puzzle.logit(
-                                "SingleCandidate Cell {} value is {}".format(
+                                "SingleCandidate {} value is {}".format(
                                     cell.name, cell.value))
 
-    def notify_cell_candidate_removed(self, value):
-        # Constraint group is not interested in candidate removals.
-        pass
-
-class SinglePositionIndex:
-    def __init__(self, cgrp):
+# When a value has been eliminated from the candidates of all except
+# one cell in a constraint group.
+class SinglePositionWatcher:
+    def __init__(self, cgrp, puzzle=None):
         # Create a dictionary of possible cells
         # for each possible value in a constraint group.
         # I.e. a dictionary of lists of cells indexed by candidate values.
     
-        self.index = {}
+        self.puzzle = puzzle
+        self.possible_cells = {}
+        self.cgrp = cgrp
         for cell in cgrp.cells:
             if cell.value is not None:
                 for candidate_value in cell:
-                    if candidate_value in self.index:
-                        self.index.get(candidate_value).append(cell)
+                    if candidate_value in self.possible_cells:
+                        self.possible_cells.get(candidate_value).add(cell)
                     else:
-                        self.index[candidate_value] = [cell]
+                        self.possible_cells[candidate_value] = set([cell])
 
         # self.value_cells =
         for cell in cgrp.cells:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
-    def notify_cell_value_set(self, cell_set, value):
-            raise AssertionError("Not implemented yet")     # TODO
+    def cell_value_set_notification(self, cell_set, value):
+        # no need to watch the value any more
+        del self.possible_cells[value]
 
-    def notify_cell_candidate_removed(self, cell, value):
-            raise AssertionError("Not implemented yet")     # TODO
+    def cell_candidate_removed_notification(self, cell, value):
+        # delete cell from set of possibilities for that value
+        possible_cells = self.possible_cells[value]
+        possible_cells.discard(cell)
+        if len(possible_cells) == 1:
+            # we have found the last possible cell for this value
+            if self.puzzle is not None:
+                self.puzzle.logit(
+                    "SinglePosition for value {} found in {} cell{}".format(
+                    value, self.cgrp.name, cell.name))
+            possible_cells[:].set_value(value)
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
@@ -152,27 +168,42 @@ class Grid(object):
     def set_grid_rc_value(self, row, col, value):
         self.grid[row][col] = value
 
-    def get_grid_rc_value(self, row, col):
+    def get_grid_cell(self, row, col):
         return self.grid[row][col]
 
     def get_row(self, rownum):
         _row = []
         for colnum in range(self.numcols):
-            _row.append(self.get_grid_rc_value(rownum, colnum))
+            _row.append(self.get_grid_cell(rownum, colnum))
         return _row
 
     def get_col(self, colnum):
         _col = []
         for rownum in range(self.numrows):
-            _col.append(self.get_grid_rc_value(rownum, colnum))
+            _col.append(self.get_grid_cell(rownum, colnum))
         return _col
 
     def get_box(self, rownum, colnum):
         _box = []
         for boxrow in range(rownum, rownum + self.box_width):
             for boxcol in range(colnum, colnum + self.box_width):
-                _box.append(self.get_grid_rc_value(boxrow, boxcol))
+                _box.append(self.get_grid_cell(boxrow, boxcol))
         return _box
+
+    def to_string(self):
+        s = ""
+        for rownum in range(self.numrows):
+            if rownum > 0:
+                s = s + "\n"
+                if rownum % self.box_width == 0:
+                    s = s + "\n"
+            colnum = 0
+            for cell in self.get_row(rownum):
+                if colnum > 0 and colnum % self.box_width == 0:
+                    s = s + " "
+                s = s + str(cell)
+                colnum = colnum + 1
+        return s
 
 
 class Puzzle(Grid):
@@ -185,20 +216,28 @@ class Puzzle(Grid):
         self.log.append(string)
 
     def _add_constraint_groups(self):
+        self.cgrps = []
         for rownum in range(self.numrows):
             _row = super(Puzzle, self).get_row(rownum)
-            ConstraintGroup(_row, self, name="Row"+str(rownum))
+            self.cgrps.append(
+                    ConstraintGroup(_row, self, name="Row"+str(rownum)))
 
         for colnum in range(self.numcols):
             _col = super(Puzzle, self).get_col(colnum)
-            ConstraintGroup(_col, self, name="Col"+str(colnum))
+            self.cgrps.append(
+                    ConstraintGroup(_col, self, name="Col"+str(colnum)))
 
         boxnum = 0
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
                 _box = super(Puzzle, self).get_box(boxrow, boxcol)
-                ConstraintGroup(_box, self, name="Box"+str(boxnum))
+                self.cgrps.append(
+                        ConstraintGroup(_box, self, name="Box"+str(boxnum)))
                 boxnum = boxnum + 1
+
+    def add_SinglePosition_watchers(self):  # TODO test this
+        for cgrp in self.cgrps:
+            dummy = SinglePositionWatcher(cgrp)
 
     def __init__(self, box_width):
         self.log = []
@@ -258,7 +297,7 @@ class Puzzle(Grid):
 
                 for _v in _values:
                     if (_v != '-'):
-                        cell = super(Puzzle, self).get_grid_rc_value(_row, _col)
+                        cell = super(Puzzle, self).get_grid_cell(_row, _col)
                         #import pdb; pdb.set_trace()
                         cell.set_value(int(_v))
                     _col = _col + 1

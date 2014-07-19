@@ -77,10 +77,10 @@ class TestGrid(unittest.TestCase):
         grid.set_grid_rc_value(0, 1, 2)
         grid.set_grid_rc_value(1, 0, 3)
         grid.set_grid_rc_value(1, 1, 4)
-        self.assertTrue(grid.get_grid_rc_value(0, 0) == 1)
-        self.assertTrue(grid.get_grid_rc_value(0, 1) == 2)
-        self.assertTrue(grid.get_grid_rc_value(1, 0) == 3)
-        self.assertTrue(grid.get_grid_rc_value(1, 1) == 4)
+        self.assertTrue(grid.get_grid_cell(0, 0) == 1)
+        self.assertTrue(grid.get_grid_cell(0, 1) == 2)
+        self.assertTrue(grid.get_grid_cell(1, 0) == 3)
+        self.assertTrue(grid.get_grid_cell(1, 1) == 4)
 
     def test_get_box(self):
         grid = Grid(2)
@@ -131,8 +131,9 @@ class TestPuzzle(unittest.TestCase):
             """
             )
         #import pdb; pdb.set_trace()
-        self.assertTrue(puzzle.get_grid_rc_value(0, 3).value == 4)
-        #print str.join("\n", puzzle.log)
+        self.assertTrue(puzzle.get_grid_cell(0, 3).value == 4)
+        print str.join("\n", puzzle.log)
+        print puzzle.to_string()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -41,6 +41,12 @@ class Cell(CandidateSet):
     def add_cell_candidate_removed_listener(self, lsnr):
         self.candidate_removed_listeners.append(lsnr)
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
     def get_value(self):
         return self.value
 
@@ -62,7 +68,11 @@ class Cell(CandidateSet):
         self.clear()    # remove all candidates
         for lsnr in self.cell_value_set_listeners:
             lsnr.cell_value_set_notification(self, value)
+
+        # delete all listeners, since there can be no further changes
+        # to this cell
         del self.cell_value_set_listeners[:]
+        del self.candidate_removed_listeners[:]
 
     def remove_candidate(self, value):
         super(Cell, self).remove_candidate(value)
@@ -112,11 +122,13 @@ class SinglePositionWatcher:
         # for each possible value in a constraint group.
         # I.e. a dictionary of lists of cells indexed by candidate values.
     
+        #import pdb; pdb.set_trace()
         self.puzzle = puzzle
         self.possible_cells = {}
         self.cgrp = cgrp
+        self.name = cgrp.name
         for cell in cgrp.cells:
-            if cell.value is not None:
+            if cell.value is None:
                 for candidate_value in cell:
                     if candidate_value in self.possible_cells:
                         self.possible_cells.get(candidate_value).add(cell)
@@ -134,6 +146,9 @@ class SinglePositionWatcher:
 
     def cell_candidate_removed_notification(self, cell, value):
         # delete cell from set of possibilities for that value
+        if value not in self.possible_cells:
+            return
+
         possible_cells = self.possible_cells[value]
         possible_cells.discard(cell)
         if len(possible_cells) == 1:
@@ -142,7 +157,7 @@ class SinglePositionWatcher:
                 self.puzzle.logit(
                     "SinglePosition for value {} found in {} cell{}".format(
                     value, self.cgrp.name, cell.name))
-            possible_cells[:].set_value(value)
+            next(iter(possible_cells)).set_value(value)
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not

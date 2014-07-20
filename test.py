@@ -130,8 +130,12 @@ class TestPuzzle(unittest.TestCase):
             -- --
             """
             )
-        #import pdb; pdb.set_trace()
         self.assertTrue(puzzle.get_grid_cell(0, 3).value == 4)
+        #print str.join("\n", puzzle.log)
+        print puzzle.to_string()
+        puzzle.add_SinglePosition_watchers()
+        #import pdb; pdb.set_trace()
+        puzzle.get_grid_cell(2, 2).set_value(1)
         print str.join("\n", puzzle.log)
         print puzzle.to_string()
 

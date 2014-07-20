@@ -20,7 +20,11 @@ Cells, Rows, Columns, Boxes
     Cells are arranged in a grid of 9 rows and 9 columns.
     The grid is divided into nine non-overlapping 3x3 boxes.
     
-    Note: Different sized grids (4x4, 9x9, 16x16, etc) are only partially supported.
+    Note: Different sized grids (4x4, 9x9, 16x16, etc) are only partially
+    supported; specifically the cells values when reading from a string
+    or file must be 1 character, but internally the values in each
+    cell are expected to be 1 up to the box width squared.
+    This obviously wouldn't work for 16x16 grids.
 
 Candidates
 
@@ -38,15 +42,16 @@ Constraint Group
     and a box.
 
     When a cell value is known, the value can be removed from the candidates of
-    all other cells in the cell's 3 associated constraint groups.
+    all other cells in the cell's 3 constraint groups.
 
 Listeners
 
-    When a cell is changed the cell can call other objects to notify them of the change.
-    Objects register themselves with the cells to say that they are interested.
+    When a cell is changed the cell can notify other objects of the change.
+    Objects register themselves with cells to say that they are interested.
     
-    Each cell has 2 lists of listeners waiting for the following
-    types of notification.
+    Each cell has 2 lists of listeners waiting for notifications.
+    Each list is for listeners interested in a specific type of
+    cell change. The 2 types are:
     
     1. Cell candidate removed.
 
@@ -60,9 +65,10 @@ Listeners
         can remove the value from the candidates of all other cells in the
         group.
 
-        Once a cell value has been set, the value set listeners are first notified
-        then all listeners and the candidates list are removed (cleared)
-        from the cell (since there can be no further changes to this cell).
+        Once a cell value has been set, the value set listeners are first
+        notified then all listeners and the candidates list are removed
+        (cleared) from the cell (since there can be no further changes to this
+        cell).
 
         Note that candidate removed listeners are *not* called when the
         candidate list is cleared in this situation, because (for example) if
@@ -108,9 +114,6 @@ Single Position
     I.e. the value has been eliminated from the candidates of all other
     cells in the constraint group.
 
-    TODO: Finding these in a constraint group requires creating an index of
-    sets of cell positions for each candidate value.
-
 Single Candidate
 
     When there is only one possible candidate remaining for a particular cell.
@@ -120,12 +123,17 @@ Medium Techniques
 
 Candidate Lines (TODO)
 
-    When the only candidates for a value in a box lie on a line,
-    therefore the same value in other boxes on the same line can be
+    If the only candidates for a value in a box lie on a line,
+    the same value in other boxes on the same line can be
     eliminated.
 
-    These could be found by creating an index for each box which lists the
-    possible rows & columns for each value in that box.  When a value has only
+    Creating an index for each box listing the
+    possible rows & columns for each value in that box.
+
+    rows{value} -> [ rownum1, rownum2, ...]
+    cols{value} -> [ colnum1, colnum2, ...]
+    
+    When a value has only
     one possible row/column remaining, it gets deleted from the candidate lists
     of cells in other boxes in the same row/column, and the row/column index
     for that value can be deleted (since it's served its purpose).

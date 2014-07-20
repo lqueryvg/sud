@@ -3,13 +3,13 @@ Objectives
 
 - Learning Python OO and TDD
 
-- Use the same techniques a human might use when solving Soduko, starting with
-  the simplest techniques first and only applying the more complex techniques
-  if needed.
+- Use the same strategies a human might when solving Soduko, starting with
+  the simplest and only applying the more complex strategies
+  when needed.
 
-- Make the solver code easy to extend when adding new solving techniques.  I.e.
-  adding a new solving technique should not require changing code for existing
-  techniques.
+- Make the solver code easy to extend when adding new strategies.  I.e.
+  adding a new strategy should not require changing code for existing
+  strategies.
 
 Terminology
 -----------
@@ -19,21 +19,22 @@ Cells, Rows, Columns, Boxes
     Each puzzle cell contains a value from 1 to 9.
     Cells are arranged in a grid of 9 rows and 9 columns.
     The grid is divided into nine non-overlapping 3x3 boxes.
-    Maybe add support for different sized grids (4x4, 9x9, 16x16, etc).
+    
+    Note: Different sized grids (4x4, 9x9, 16x16, etc) are only partially supported.
 
 Candidates
 
-    The set of possible values for a Cell when the actual cell value is
-    not yet known. When the puzzle is empty, the candidate set for every cell
+    The set of possible values for a cell when the cell value is
+    not yet known. When the puzzle is empty, the candidates for every cell
     will be the set of numbers from 1 to 9 inclusive.
 
 Constraint Group
 
     A grouping of 9 cells in a row, column or box.  The cells in any constraint
-    must contain numbers 1 to 9 without repeats.
+    group must contain the numbers 1 to 9 without repeats.
 
-    Every cell can be a member of more than one constraint group; more
-    specifically every cell is a member of 3 constraint groups: a row, a column
+    Every cell can be a member of more than one constraint group; in fact
+    every cell is a member of 3 constraint groups: a row, a column
     and a box.
 
     When a cell value is known, the value can be removed from the candidates of
@@ -41,11 +42,11 @@ Constraint Group
 
 Listeners
 
-    Each cell has the ability to 2 lists of listeners waiting for notifications.
-    There are 2 types of notification. Each list is for 
-    Each list is for listeners 
-    , one list for
-    each type of n
+    When a cell is changed the cell can call other objects to notify them of the change.
+    Objects register themselves with the cells to say that they are interested.
+    
+    Each cell has 2 lists of listeners waiting for the following
+    types of notification.
     
     1. Cell candidate removed.
 
@@ -59,9 +60,9 @@ Listeners
         can remove the value from the candidates of all other cells in the
         group.
 
-        Once a cell value is set, the value set listeners are first notified
-        then both listener lists and the candidate lists are cleared (since
-        there cen be no further changes to this cell).
+        Once a cell value has been set, the value set listeners are first notified
+        then all listeners and the candidates list are removed (cleared)
+        from the cell (since there can be no further changes to this cell).
 
         Note that candidate removed listeners are *not* called when the
         candidate list is cleared in this situation, because (for example) if
@@ -74,7 +75,7 @@ Indexes (Idea)
 
     Indexes are like constraint groups in that they store data about
     candidates, with a view to detecting conditions for different solving
-    techniques.
+    strategies.
 
     For example, to detect Single Position, we could create an index on a
     constraint group which, for each value not yet found, lists the cells the
@@ -82,8 +83,8 @@ Indexes (Idea)
     reduced to 1, there can only be one cell which can contain that value, so
     the position of the value becomes known.
 
-    Therefore the index would need to be notified whenever a cell value or its
-    candidates change.
+    Therefore the index would need to be notified whenever a cell value is
+    set or a cell candidate is removed.
 
     (Perhaps an Index *is* a more general form of a constraint group?  I.e.
     perhaps a constraint group should be generalised into a single candidate

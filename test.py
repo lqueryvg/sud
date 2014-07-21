@@ -132,7 +132,6 @@ class TestPuzzle(unittest.TestCase):
             )
         self.assertTrue(puzzle.get_grid_cell(0, 3).value == 4)
         #print puzzle.to_string()
-        #puzzle.add_SinglePosition_watchers()
         #import pdb; pdb.set_trace()
         #puzzle.get_grid_cell(2, 2).set_value(1)
         #print str.join("\n", puzzle.solution)
@@ -154,7 +153,7 @@ class TestPuzzle(unittest.TestCase):
         self.assertTrue(puzzle.get_grid_cell(1, 3).value is None)
         self.assertTrue(puzzle.get_grid_cell(3, 1).value is None)
 
-        puzzle.add_SinglePosition_watchers()
+        puzzle.add_SinglePosition()
 
         self.assertTrue(puzzle.get_grid_cell(1, 3).value == 1)
         self.assertTrue(puzzle.get_grid_cell(3, 1).value == 1)

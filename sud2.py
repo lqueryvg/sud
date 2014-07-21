@@ -28,10 +28,12 @@ class CandidateSet(set):
 
 
 class Cell(CandidateSet):
-    def __init__(self, candidate_values, name=""):
+    def __init__(self, candidate_values, row=-1, col=-1):
         super(Cell, self).__init__(candidate_values)
         self.value = None
-        self.name = name
+        self.name = "Cell{}{}".format(row, col)
+        self.row = row
+        self.col = col
         self.cell_value_set_listeners = []
         self.candidate_removed_listeners = []
 
@@ -116,7 +118,7 @@ class ConstraintGroup:
 
 # When a value has been eliminated from the candidates of all except
 # one cell in a constraint group.
-class SinglePositionWatcher:
+class SinglePosition:
     def __init__(self, cgrp, puzzle=None):
         # Create a dictionary of possible cells
         # for each possible value in a constraint group.
@@ -170,6 +172,62 @@ class SinglePositionWatcher:
         possible_cells.discard(cell)
         if len(possible_cells) == 1:
             self._found_value(iter(possible_cells).next(), value)
+
+
+# The only candidates for a value in a box lie on a line (i.e. row or
+# column), so the same value in other boxes on the same line can be
+# eliminated.
+
+class CandidateLines:
+
+    def __init__(self, box, puzzle=None):
+
+        # Create an index for each box listing the possible rows & columns for
+        # each value in that box.
+        #
+        # rows{value} -> [ rownum1, rownum2, ...]
+        #
+        # cols{value} -> [ colnum1, colnum2, ...]
+        
+        self.puzzle = puzzle
+        self.rows = {}
+        self.cols = {}
+        self.box = box
+        self.name = box.name
+
+        for cell in box:
+            if cell.value is not None:
+                #import pdb; pdb.set_trace()
+                raise AssertionError("Unexpected value in cgrp cell;"
+                        " only cells without a value should be in a cgrp.")
+
+            for cand in cell:
+                if cand in self.rows:
+                    self.rows.get(cand).add(cell.row)
+                else:
+                    self.rows[cand] = set([cell.row])
+
+                if cand in self.cols:
+                    self.cols.get(cand).add(cell.col)
+                else:
+                    self.cols[cand] = set([cell.col])
+        
+        for cell in box:
+            cell.add_cell_candidate_removed_listener(self)
+            cell.add_cell_value_set_listener(self)
+
+        # If any values have only 1 possible row or col within the box, we can
+        # eliminate the value from other boxes in the same row or col.
+        
+        for cand in list(self.rows):
+            if len(self.rows[value]) == 1:
+                del self.rows[value]
+                # TODO eliminate cand from same row cells in other boxes
+
+        for cand in list(self.cols):
+            if len(self.cols[value]) == 1:
+                del self.cols[value]
+                # TODO eliminate cand from same col cells in other boxes
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
@@ -262,9 +320,9 @@ class Puzzle(Grid):
                         ConstraintGroup(_box, self, name="Box"+str(boxnum)))
                 boxnum = boxnum + 1
 
-    def add_SinglePosition_watchers(self):  # TODO test this
+    def add_SinglePosition(self):  # TODO test this
         for cgrp in self.cgrps:
-            dummy = SinglePositionWatcher(cgrp, puzzle=self)
+            dummy = SinglePosition(cgrp, puzzle=self)
 
     def __init__(self, box_width):
         self.solution = []
@@ -273,7 +331,7 @@ class Puzzle(Grid):
             for colnum in range(self.numcols):
                 super(Puzzle, self).set_grid_rc_value(
                     rownum, colnum, Cell(range(1, self.numrows + 1),
-                        name="Cell{}{}".format(rownum, colnum))
+                        row=rownum, col=colnum)
                 )
         self._add_constraint_groups()
 

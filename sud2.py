@@ -101,16 +101,16 @@ class ConstraintGroup:
             # already there, otherwise we'll get a key error.
             if value in cell:
                 if self.puzzle is not None:
-                    self.puzzle.logit(
-                            "{} RemoveCandidate {} from {}".format(
-                                self.name, value, cell.name))
+                    self.puzzle.log_solution_step(
+                            "RemoveCandidate {} from {} {}".format(
+                                value, self.name, cell.name))
                 try:
                     cell.remove_candidate(value)
                 except SingleCandidate:
                     # list(my_set)[0] grabs any value from a set
                     cell.set_value(list(cell)[0])
                     if self.puzzle is not None:
-                        self.puzzle.logit(
+                        self.puzzle.log_solution_step(
                                 "SingleCandidate {} value is {}".format(
                                     cell.name, cell.value))
 
@@ -124,40 +124,52 @@ class SinglePositionWatcher:
     
         #import pdb; pdb.set_trace()
         self.puzzle = puzzle
-        self.possible_cells = {}
+        self.possible_values = {}
         self.cgrp = cgrp
         self.name = cgrp.name
         for cell in cgrp.cells:
-            if cell.value is None:
-                for candidate_value in cell:
-                    if candidate_value in self.possible_cells:
-                        self.possible_cells.get(candidate_value).add(cell)
-                    else:
-                        self.possible_cells[candidate_value] = set([cell])
+            if cell.value is not None:
+                #import pdb; pdb.set_trace()
+                raise AssertionError("Unexpected value in cgrp cell;"
+                        " only cells without a value should be in a cgrp.")
+            for candidate_value in cell:
+                if candidate_value in self.possible_values:
+                    self.possible_values.get(candidate_value).add(cell)
+                else:
+                    self.possible_values[candidate_value] = set([cell])
 
-        # self.value_cells =
+        
         for cell in cgrp.cells:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
+        # If any values have only 1 possible cell, we have found some values
+        for value in list(self.possible_values):
+            possible_cells = self.possible_values[value]
+            if len(possible_cells) == 1:
+                self._found_value(iter(possible_cells).next(), value)
+
+    def _found_value(self, cell, value):
+        # we have found the last possible cell for this value
+        if self.puzzle is not None:
+            self.puzzle.log_solution_step(
+                "SinglePosition for {} in {} {}".format(
+                value, self.cgrp.name, cell.name))
+        cell.set_value(value)
+
     def cell_value_set_notification(self, cell_set, value):
         # no need to watch the value any more
-        del self.possible_cells[value]
+        del self.possible_values[value]
 
     def cell_candidate_removed_notification(self, cell, value):
         # delete cell from set of possibilities for that value
-        if value not in self.possible_cells:
+        if value not in self.possible_values:
             return
 
-        possible_cells = self.possible_cells[value]
+        possible_cells = self.possible_values[value]
         possible_cells.discard(cell)
         if len(possible_cells) == 1:
-            # we have found the last possible cell for this value
-            if self.puzzle is not None:
-                self.puzzle.logit(
-                    "SinglePosition for value {} found in {} cell{}".format(
-                    value, self.cgrp.name, cell.name))
-            next(iter(possible_cells)).set_value(value)
+            self._found_value(iter(possible_cells).next(), value)
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
@@ -226,9 +238,9 @@ class Puzzle(Grid):
     def add_index():
         raise AssertionError("Not implemented yet")     # TODO
 
-    def logit(self, string):
-        #print "log " + string
-        self.log.append(string)
+    def log_solution_step(self, string):
+        #print "solution " + string
+        self.solution.append(string)
 
     def _add_constraint_groups(self):
         self.cgrps = []
@@ -252,10 +264,10 @@ class Puzzle(Grid):
 
     def add_SinglePosition_watchers(self):  # TODO test this
         for cgrp in self.cgrps:
-            dummy = SinglePositionWatcher(cgrp)
+            dummy = SinglePositionWatcher(cgrp, puzzle=self)
 
     def __init__(self, box_width):
-        self.log = []
+        self.solution = []
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):

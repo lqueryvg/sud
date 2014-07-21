@@ -96,7 +96,7 @@ class TestPuzzle(unittest.TestCase):
     def test_puzzle_create(self):
         puzzle = Puzzle(2);
 
-    def test_puzzle_parse_error(self):
+    def test_puzzle_parse_errors(self):
         puzzle = Puzzle(2);
         self.assertRaisesRegexp(PuzzleParseError,
                 'expect \w* words \(one per box\)',
@@ -119,25 +119,47 @@ class TestPuzzle(unittest.TestCase):
                     -- --
                 """)
 
-    def test_simple_puzzle(self):
+    def test_single_candidate(self):
         puzzle = Puzzle(2);
         puzzle.load_from_string(
             """
             12 3-
-            34 --
+            -- --
 
             -- --
             -- --
             """
             )
         self.assertTrue(puzzle.get_grid_cell(0, 3).value == 4)
-        #print str.join("\n", puzzle.log)
-        print puzzle.to_string()
-        puzzle.add_SinglePosition_watchers()
+        #print puzzle.to_string()
+        #puzzle.add_SinglePosition_watchers()
         #import pdb; pdb.set_trace()
-        puzzle.get_grid_cell(2, 2).set_value(1)
-        print str.join("\n", puzzle.log)
-        print puzzle.to_string()
+        #puzzle.get_grid_cell(2, 2).set_value(1)
+        #print str.join("\n", puzzle.solution)
+        #print puzzle.to_string()
+
+    def test_single_position(self):
+        puzzle = Puzzle(2);
+        puzzle.load_from_string(
+            """
+            1- --
+            -- --
+
+            -- 1-
+            -- --
+            """
+            )
+        #print "\n" + puzzle.to_string()
+        #import pdb; pdb.set_trace()
+        self.assertTrue(puzzle.get_grid_cell(1, 3).value is None)
+        self.assertTrue(puzzle.get_grid_cell(3, 1).value is None)
+
+        puzzle.add_SinglePosition_watchers()
+
+        self.assertTrue(puzzle.get_grid_cell(1, 3).value == 1)
+        self.assertTrue(puzzle.get_grid_cell(3, 1).value == 1)
+        #print "\n" + puzzle.to_string()
+        #print str.join("\n", puzzle.solution)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

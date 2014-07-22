@@ -195,7 +195,7 @@ class CandidateLines:
         self.box = box
         self.name = box.name
 
-        for cell in box:
+        for cell in box.cells:
             if cell.value is not None:
                 #import pdb; pdb.set_trace()
                 raise AssertionError("Unexpected value in cgrp cell;"
@@ -212,7 +212,7 @@ class CandidateLines:
                 else:
                     self.cols[cand] = set([cell.col])
         
-        for cell in box:
+        for cell in box.cells:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
@@ -220,13 +220,17 @@ class CandidateLines:
         # eliminate the value from other boxes in the same row or col.
         
         for cand in list(self.rows):
-            if len(self.rows[value]) == 1:
-                del self.rows[value]
+            if len(self.rows[cand]) == 1:
+                #import pdb; pdb.set_trace()
+                rownum = iter(self.rows[cand]).next()
+                #print "eliminate {} from row {}".format(cand, rownum)
                 # TODO eliminate cand from same row cells in other boxes
+                del self.rows[cand]
+                #for col in cols_outside_box:
 
         for cand in list(self.cols):
-            if len(self.cols[value]) == 1:
-                del self.cols[value]
+            if len(self.cols[cand]) == 1:
+                del self.cols[cand]
                 # TODO eliminate cand from same col cells in other boxes
 
 
@@ -301,7 +305,8 @@ class Puzzle(Grid):
         self.solution.append(string)
 
     def _add_constraint_groups(self):
-        self.cgrps = []
+        self.cgrps = []     # all constraint groups
+        self.box_cgrps = []     # just the boxes, for convenience
         for rownum in range(self.numrows):
             _row = super(Puzzle, self).get_row(rownum)
             self.cgrps.append(
@@ -316,13 +321,18 @@ class Puzzle(Grid):
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
                 _box = super(Puzzle, self).get_box(boxrow, boxcol)
-                self.cgrps.append(
-                        ConstraintGroup(_box, self, name="Box"+str(boxnum)))
+                cgrp = ConstraintGroup(_box, self, name="Box"+str(boxnum))
+                self.cgrps.append(cgrp)
+                self.box_cgrps.append(cgrp)
                 boxnum = boxnum + 1
 
-    def add_SinglePosition(self):  # TODO test this
+    def add_SinglePosition(self):
         for cgrp in self.cgrps:
             dummy = SinglePosition(cgrp, puzzle=self)
+
+    def add_CandidateLines(self):
+        for box_cgrp in self.box_cgrps:
+            dummy = CandidateLines(box_cgrp, puzzle=self)
 
     def __init__(self, box_width):
         self.solution = []

@@ -160,5 +160,27 @@ class TestPuzzle(unittest.TestCase):
         #print "\n" + puzzle.to_string()
         #print str.join("\n", puzzle.solution)
 
+    def test_candidate_lines(self):
+        puzzle = Puzzle(3);
+        puzzle.load_from_string(
+            """
+            123 --- ---
+            456 --- ---
+            --- --- ---
+
+            --- --- ---
+            --- --- ---
+            --- --- ---
+
+            --- --- ---
+            --- --- ---
+            --- --- ---
+            """
+            )
+        print "\n" + puzzle.to_string()
+        self.assertTrue(7 in puzzle.get_grid_cell(0, 3))
+        puzzle.add_CandidateLines()
+        self.assertFalse(7 in puzzle.get_grid_cell(0, 3))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

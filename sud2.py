@@ -27,6 +27,8 @@ class CandidateSet(set):
             raise SingleCandidate
 
 
+# TODO CandidateSet should maybe be a member rather than a superclass.
+# I'm not sure it seems natural for candidates to be "in" a cell.
 class Cell(CandidateSet):
     def __init__(self, candidate_values, row=-1, col=-1):
         super(Cell, self).__init__(candidate_values)
@@ -51,6 +53,9 @@ class Cell(CandidateSet):
 
     def get_value(self):
         return self.value
+
+    def __repr__(self):
+        return self.name
 
     def __str__(self):
         if self.value == None:
@@ -77,12 +82,15 @@ class Cell(CandidateSet):
         del self.candidate_removed_listeners[:]
 
     def remove_candidate(self, value):
+        #print "in cell remove_candidate"
         super(Cell, self).remove_candidate(value)
         for lsnr in self.candidate_removed_listeners:
+            #print "{} remove_candidate({}) calling listener {}".format(
+            #        self.name, value, repr(lsnr))
             lsnr.cell_candidate_removed_notification(self, value)
 
 
-class ConstraintGroup:
+class ConstraintGroup(object):
     def __init__(self, cells, puzzle=None, name=""):
         # Optionally point back to the puzzle
         self.puzzle = puzzle
@@ -94,8 +102,8 @@ class ConstraintGroup:
         for cell in cells:
             cell.add_cell_value_set_listener(self)
 
-    def cell_value_set_notification(self, cell_set, value):
-        self.cells.remove(cell_set)
+    def cell_value_set_notification(self, changed_cell, value):
+        self.cells.remove(changed_cell)
         for cell in self.cells:
             # It's possible that an over-lapping contstraint
             # group has already deleted the candidate value
@@ -159,7 +167,7 @@ class SinglePosition:
                 value, self.cgrp.name, cell.name))
         cell.set_value(value)
 
-    def cell_value_set_notification(self, cell_set, value):
+    def cell_value_set_notification(self, changed_cell, value):
         # no need to watch the value any more
         del self.possible_values[value]
 
@@ -180,22 +188,26 @@ class SinglePosition:
 
 class CandidateLines:
 
-    def __init__(self, box, puzzle=None):
+    def __init__(self, box_cgrp, puzzle=None):
 
-        # Create an index for each box listing the possible rows & columns for
-        # each value in that box.
+        # Create an index for each box listing the possible rows & columns
+        # within the box for each value not yet found.
         #
-        # rows{value} -> [ rownum1, rownum2, ...]
+        # 1 rows{candidate_value} -> [ rownum1, rownum2, ...]
+        # 2 cols{candidate_value} -> [ colnum1, colnum2, ...]
         #
-        # cols{value} -> [ colnum1, colnum2, ...]
+        # rows{candidate_value}{rownum} = count
+        #
+        # cols{candidate_value}{colnum} = count
+        assert(puzzle is not None)
         
         self.puzzle = puzzle
         self.rows = {}
         self.cols = {}
-        self.box = box
-        self.name = box.name
+        self.box_cgrp = box_cgrp
+        self.name = box_cgrp.name
 
-        for cell in box.cells:
+        for cell in box_cgrp.cells:
             if cell.value is not None:
                 #import pdb; pdb.set_trace()
                 raise AssertionError("Unexpected value in cgrp cell;"
@@ -211,27 +223,62 @@ class CandidateLines:
                     self.cols.get(cand).add(cell.col)
                 else:
                     self.cols[cand] = set([cell.col])
-        
-        for cell in box.cells:
+
+        for cell in box_cgrp.cells:
+            #print self.name + " adding candidate lines listeners to " + repr(cell)
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
+        #import pdb; pdb.set_trace()
+
         # If any values have only 1 possible row or col within the box, we can
         # eliminate the value from other boxes in the same row or col.
-        
-        for cand in list(self.rows):
-            if len(self.rows[cand]) == 1:
-                #import pdb; pdb.set_trace()
-                rownum = iter(self.rows[cand]).next()
-                #print "eliminate {} from row {}".format(cand, rownum)
-                # TODO eliminate cand from same row cells in other boxes
-                del self.rows[cand]
-                #for col in cols_outside_box:
+        for candidate_value in list(self.rows):
+            self._check_row_for_candidate_line(candidate_value)
 
-        for cand in list(self.cols):
-            if len(self.cols[cand]) == 1:
-                del self.cols[cand]
-                # TODO eliminate cand from same col cells in other boxes
+        for candidate_value in list(self.cols):
+            self._check_col_for_candidate_line(candidate_value)
+
+    def _check_row_for_candidate_line(self, value):
+        if len(self.rows[value]) == 1:
+            # Get line from which to eliminate this value.
+            rownum = iter(self.rows[value]).next()
+            print "CandidateLine {} eliminate {} from row {}".format(
+                    self, value, rownum)
+            del self.rows[value]
+            for colnum in self.box_cgrp.get_cols_outside_this_box():
+                self.puzzle.get_grid_cell(rownum, colnum
+                        ).remove_candidate(value)
+        
+    # TODO fix code duplication (with block above)
+    def _check_col_for_candidate_line(self, value):
+        if len(self.cols[value]) == 1:
+            # Get line from which to eliminate this value.
+            colnum = iter(self.cols[value]).next()
+            print "CandidateLine {} eliminate {} from col {}".format(
+                    self, value, rownum)
+            del self.cols[value]
+            for rownum in self.box_cgrp.get_rows_outside_this_box():
+                self.puzzle.get_rc_cell(rownum, colnum
+                        ).remove_candidate(value)
+
+    def __repr__(self):
+        return self.name
+
+    def cell_value_set_notification(self, cell, value):
+        del self.rows[value]
+        del self.cols[value]
+
+    def cell_candidate_removed_notification(self, cell, value):
+        #import pdb; pdb.set_trace()
+        # LOGIC FLAWED HERE
+        # need a nested hash containing a count
+        #self.rows[value].remove(cell.row)
+        #self._check_row_for_candidate_line(value)
+#
+#        self.cols[value].remove(cell.col)
+#        self._check_col_for_candidate_line(value)
+        raise AssertionError("not implemented yet")
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
@@ -260,19 +307,19 @@ class Grid(object):
     def get_grid_cell(self, row, col):
         return self.grid[row][col]
 
-    def get_row(self, rownum):
+    def get_row_cells(self, rownum):
         _row = []
         for colnum in range(self.numcols):
             _row.append(self.get_grid_cell(rownum, colnum))
         return _row
 
-    def get_col(self, colnum):
+    def get_col_cells(self, colnum):
         _col = []
         for rownum in range(self.numrows):
             _col.append(self.get_grid_cell(rownum, colnum))
         return _col
 
-    def get_box(self, rownum, colnum):
+    def get_box_cells(self, rownum, colnum):
         _box = []
         for boxrow in range(rownum, rownum + self.box_width):
             for boxcol in range(colnum, colnum + self.box_width):
@@ -287,7 +334,7 @@ class Grid(object):
                 if rownum % self.box_width == 0:
                     s = s + "\n"
             colnum = 0
-            for cell in self.get_row(rownum):
+            for cell in self.get_row_cells(rownum):
                 if colnum > 0 and colnum % self.box_width == 0:
                     s = s + " "
                 s = s + str(cell)
@@ -295,7 +342,38 @@ class Grid(object):
         return s
 
 
+class Box(ConstraintGroup):
+    def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
+        assert(puzzle is not None)
+        super(Box, self).__init__(cells, puzzle,
+                name = "Box" + str(boxrow) + str(boxcol)
+                )
+        self.boxrow = boxrow
+        self.boxcol = boxcol
+
+    def get_cols_outside_this_box(self):
+        allrows = range(self.puzzle.numrows)
+        box_rows = range(self.boxrow, self.boxrow + self.puzzle.box_width)
+        return set(allrows).difference(set(box_rows))
+
+    def get_rows_outside_this_box(self):
+        allcols = range(self.puzzle.numcols)
+        box_cols = range(self.boxcol, self.boxcol + self.puzzle.box_width)
+        return set(allcols).difference(set(box_cols))
+
+
 class Puzzle(Grid):
+
+    def __init__(self, box_width):
+        self.solution = []
+        super(Puzzle, self).__init__(box_width)
+        for rownum in range(self.numrows):
+            for colnum in range(self.numcols):
+                super(Puzzle, self).set_grid_rc_value(
+                    rownum, colnum, Cell(range(1, self.numrows + 1),
+                        row=rownum, col=colnum)
+                )
+        self._add_constraint_groups()
 
     def add_index():
         raise AssertionError("Not implemented yet")     # TODO
@@ -308,23 +386,28 @@ class Puzzle(Grid):
         self.cgrps = []     # all constraint groups
         self.box_cgrps = []     # just the boxes, for convenience
         for rownum in range(self.numrows):
-            _row = super(Puzzle, self).get_row(rownum)
-            self.cgrps.append(
-                    ConstraintGroup(_row, self, name="Row"+str(rownum)))
+            _row_cells = super(Puzzle, self).get_row_cells(rownum)
+            self.cgrps.append(ConstraintGroup(_row_cells,
+                puzzle=self, name="Row"+str(rownum)))
 
         for colnum in range(self.numcols):
-            _col = super(Puzzle, self).get_col(colnum)
-            self.cgrps.append(
-                    ConstraintGroup(_col, self, name="Col"+str(colnum)))
+            _col_cells = super(Puzzle, self).get_col_cells(colnum)
+            self.cgrps.append(ConstraintGroup(
+                        _col_cells, puzzle=self, name="Col"+str(colnum)))
 
-        boxnum = 0
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
-                _box = super(Puzzle, self).get_box(boxrow, boxcol)
-                cgrp = ConstraintGroup(_box, self, name="Box"+str(boxnum))
-                self.cgrps.append(cgrp)
-                self.box_cgrps.append(cgrp)
-                boxnum = boxnum + 1
+                _box_cells = super(Puzzle, self).get_box_cells(boxrow, boxcol)
+                box = Box(_box_cells, puzzle=self,
+                        boxrow=boxrow, boxcol=boxcol)
+                self.cgrps.append(box)
+                self.box_cgrps.append(box)
+
+#        for box in Grig.get_all_boxes():
+#            cgrp = ConstraintGroup(s, self, name="Box"+str(box.coord))
+#            self.cgrps.append(cgrp)
+#            self.box_cgrps.append(cgrp)
+
 
     def add_SinglePosition(self):
         for cgrp in self.cgrps:
@@ -333,17 +416,6 @@ class Puzzle(Grid):
     def add_CandidateLines(self):
         for box_cgrp in self.box_cgrps:
             dummy = CandidateLines(box_cgrp, puzzle=self)
-
-    def __init__(self, box_width):
-        self.solution = []
-        super(Puzzle, self).__init__(box_width)
-        for rownum in range(self.numrows):
-            for colnum in range(self.numcols):
-                super(Puzzle, self).set_grid_rc_value(
-                    rownum, colnum, Cell(range(1, self.numrows + 1),
-                        row=rownum, col=colnum)
-                )
-        self._add_constraint_groups()
 
     def load_from_iterable(self, iterable):
         _row = 0

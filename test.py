@@ -82,13 +82,13 @@ class TestGrid(unittest.TestCase):
         self.assertTrue(grid.get_grid_cell(1, 0) == 3)
         self.assertTrue(grid.get_grid_cell(1, 1) == 4)
 
-    def test_get_box(self):
+    def test_get_box_cells(self):
         grid = Grid(2)
         grid.set_grid_rc_value(0, 0, 1)
         grid.set_grid_rc_value(0, 1, 2)
         grid.set_grid_rc_value(1, 0, 3)
         grid.set_grid_rc_value(1, 1, 4)
-        box = grid.get_box(0, 0)
+        box = grid.get_box_cells(0, 0)
         self.assertTrue(len(box) == 4)
 
 
@@ -160,7 +160,7 @@ class TestPuzzle(unittest.TestCase):
         #print "\n" + puzzle.to_string()
         #print str.join("\n", puzzle.solution)
 
-    def test_candidate_lines(self):
+    def test_candidate_lines1(self):
         puzzle = Puzzle(3);
         puzzle.load_from_string(
             """
@@ -178,9 +178,42 @@ class TestPuzzle(unittest.TestCase):
             """
             )
         print "\n" + puzzle.to_string()
-        self.assertTrue(7 in puzzle.get_grid_cell(0, 3))
+        self.assertTrue(7 in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(8 in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(9 in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(7 in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(8 in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(9 in puzzle.get_grid_cell(2, 6))
         puzzle.add_CandidateLines()
-        self.assertFalse(7 in puzzle.get_grid_cell(0, 3))
+        self.assertTrue(7 not in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(8 not in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(9 not in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(7 not in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(8 not in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(9 not in puzzle.get_grid_cell(2, 6))
+
+    def test_candidate_lines2(self):
+        puzzle = Puzzle(3);
+        puzzle.add_CandidateLines()
+        self.assertTrue(7 in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(8 in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(9 in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(7 in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(8 in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(9 in puzzle.get_grid_cell(2, 6))
+        #import pdb; pdb.set_trace()
+        puzzle.get_grid_cell(0, 0).set_value(1)
+        puzzle.get_grid_cell(0, 1).set_value(2)
+        puzzle.get_grid_cell(0, 2).set_value(3)
+        puzzle.get_grid_cell(1, 0).set_value(4)
+        puzzle.get_grid_cell(1, 1).set_value(5)
+        puzzle.get_grid_cell(1, 2).set_value(6)
+        self.assertTrue(7 not in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(8 not in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(9 not in puzzle.get_grid_cell(2, 3))
+        self.assertTrue(7 not in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(8 not in puzzle.get_grid_cell(2, 6))
+        self.assertTrue(9 not in puzzle.get_grid_cell(2, 6))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

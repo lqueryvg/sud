@@ -191,17 +191,25 @@ class AutoVivification(dict):
             value = self[item] = type(self)()
             return value
 
-# The only candidates for a value in a box lie on a line (i.e. row or
-# column), so the same value in other boxes on the same line can be
-# eliminated.
-
 class CandidateLines:
+
+    """
+
+    If the only candidates for a value in a box lie on a line (i.e. row or
+    column within that box), then eliminate the value from candidates of cells
+    in other boxes on the same line.
+
+    """
+
+    def __repr__(self):
+        return "CandidateLines" + self.name
 
     def __init__(self, box_cgrp, puzzle=None):
 
+        assert(puzzle is not None)
+        
         # Create an index for each box listing the possible rows & columns
         # within the box for each value not yet found.
-        #
         # 1 rows{candidate_value} -> [ rownum1, rownum2, ...]
         # 2 cols{candidate_value} -> [ colnum1, colnum2, ...]
         #
@@ -212,8 +220,6 @@ class CandidateLines:
         # lines[value]['row'][rownum]['peers'] = set of cells
         # lines[value]['col'][colnum]['count'] = count
         # lines[value]['col'][colnum]['peers'] = set of cells
-        #
-        assert(puzzle is not None)
         
         self.puzzle = puzzle
         self.rows = {}      # TODO eliminate
@@ -224,10 +230,10 @@ class CandidateLines:
 
         for cell in box_cgrp.cells:
             if cell.value is not None:
-                #import pdb; pdb.set_trace()
                 raise AssertionError("Unexpected value in cgrp cell;"
                         " only cells without a value should be in a cgrp.")
 
+            #import pdb; pdb.set_trace()
             for cand in cell:
                 row = self.lines[cand]['row'][cell.row]
                 if 'count' not in row:
@@ -235,7 +241,7 @@ class CandidateLines:
                 row['count'] += 1
                 row['peers'] = self.box_cgrp.get_peers_in_row(cell.row)
 
-                col = self.lines[cand]['row'][cell.col]
+                col = self.lines[cand]['col'][cell.col]
                 if 'count' not in col:
                     col['count'] = 0
                 col['count'] += 1
@@ -245,7 +251,6 @@ class CandidateLines:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
-        #import pdb; pdb.set_trace()
 
         # If any values have only 1 possible row or col within the box, we can
         # eliminate the value from other boxes in the same row or col.
@@ -255,31 +260,9 @@ class CandidateLines:
         # lines[value]['col'][colnum]['peers'] = set of cells
         for cand in list(self.lines):
             for line_type in self.lines[cand]:
-                for linenum in self.lines[cand][line_type]:
+                # use list() because we might del items as we go
+                for linenum in list(self.lines[cand][line_type]):
                     self._check_line(self.lines[cand][line_type], linenum, cand)
-
-    def _check_row_for_candidate_line(self, value):
-        if len(self.rows[value]) == 1:
-            # Get line from which to eliminate this value.
-            rownum = iter(self.rows[value]).next()
-            print "CandidateLine {} eliminate {} from row {}".format(
-                    self, value, rownum)
-            del self.rows[value]
-            for colnum in self.box_cgrp.get_cols_outside_this_box():
-                self.puzzle.get_cell(rownum, colnum
-                        ).remove_candidate(value)
-        
-    # TODO fix code duplication (with block above)
-    def _check_col_for_candidate_line(self, value):
-        if len(self.cols[value]) == 1:
-            # Get line from which to eliminate this value.
-            colnum = iter(self.cols[value]).next()
-            print "CandidateLine {} eliminate {} from col {}".format(
-                    self, value, rownum)
-            del self.cols[value]
-            for rownum in self.box_cgrp.get_rows_outside_this_box():
-                self.puzzle.get_rc_cell(rownum, colnum
-                        ).remove_candidate(value)
 
     def __repr__(self):
         return self.name
@@ -289,9 +272,9 @@ class CandidateLines:
         del self.cols[value]
 
     def _check_line(self, lines, linenum, value):
-        # If there is only one line in the box that
-        # the value can be on, remove this value
-        # from candidates of peers on same line.
+
+        # If there is only one line in the box that the value can be on, remove
+        # this value from candidates of peers on the same line.
         
         # Example:
         # lines[value]['row'][rownum]['count'] = count
@@ -303,14 +286,9 @@ class CandidateLines:
         del lines[linenum]
 
 
+    #raise AssertionError("not implemented yet")
     def cell_candidate_removed_notification(self, cell, value):
-        #import pdb; pdb.set_trace()
-        # LOGIC FLAWED HERE
-        # need a nested hash containing a count
-        #self.rows[value].remove(cell.row)
-        #self._check_row_for_candidate_line(value)
-#
-        raise AssertionError("not implemented yet")
+        import pdb; pdb.set_trace()
 
         lines = self.lines[value]['row']
         lines[cell.row]['count'] -= 1
@@ -364,6 +342,7 @@ class Grid(object):
         _box = []
         for boxrow in range(rownum, rownum + self.box_width):
             for boxcol in range(colnum, colnum + self.box_width):
+                #import pdb; pdb.set_trace()
                 _box.append(self.get_cell(boxrow, boxcol))
         return _box
 

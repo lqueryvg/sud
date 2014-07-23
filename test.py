@@ -194,6 +194,7 @@ class TestPuzzle(unittest.TestCase):
 
     def test_candidate_lines2(self):
         puzzle = Puzzle(3);
+        import pdb; pdb.set_trace()
         puzzle.add_CandidateLines()
         self.assertTrue(7 in puzzle.get_cell(2, 3))
         self.assertTrue(8 in puzzle.get_cell(2, 3))

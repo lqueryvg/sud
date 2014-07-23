@@ -182,6 +182,15 @@ class SinglePosition:
             self._found_value(iter(possible_cells).next(), value)
 
 
+class AutoVivification(dict):
+    """Implementation of perl's autovivification feature."""
+    def __getitem__(self, item):
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+            value = self[item] = type(self)()
+            return value
+
 # The only candidates for a value in a box lie on a line (i.e. row or
 # column), so the same value in other boxes on the same line can be
 # eliminated.
@@ -196,14 +205,20 @@ class CandidateLines:
         # 1 rows{candidate_value} -> [ rownum1, rownum2, ...]
         # 2 cols{candidate_value} -> [ colnum1, colnum2, ...]
         #
-        # rows{candidate_value}{rownum} = count
-        #
+        # rows{candidate_value}{rownum}{cells} = [ cells, peers ]
         # cols{candidate_value}{colnum} = count
+        #
+        # lines[value]['row'][rownum]['count'] = count
+        # lines[value]['row'][rownum]['peers'] = set of cells
+        # lines[value]['col'][colnum]['count'] = count
+        # lines[value]['col'][colnum]['peers'] = set of cells
+        #
         assert(puzzle is not None)
         
         self.puzzle = puzzle
-        self.rows = {}
-        self.cols = {}
+        self.rows = {}      # TODO eliminate
+        self.cols = {}      # TODO eliminate
+        self.lines = AutoVivification()
         self.box_cgrp = box_cgrp
         self.name = box_cgrp.name
 
@@ -214,17 +229,18 @@ class CandidateLines:
                         " only cells without a value should be in a cgrp.")
 
             for cand in cell:
-                if cand in self.rows:
-                    self.rows.get(cand).add(cell.row)
-                else:
-                    self.rows[cand] = set([cell.row])
+                row = self.lines[cand]['row'][cell.row]
+                if 'count' not in row:
+                    row['count'] = 0
+                row['count'] += 1
+                row['peers'] = self.box_cgrp.get_peers_in_row(cell.row)
 
-                if cand in self.cols:
-                    self.cols.get(cand).add(cell.col)
-                else:
-                    self.cols[cand] = set([cell.col])
+                col = self.lines[cand]['row'][cell.col]
+                if 'count' not in col:
+                    col['count'] = 0
+                col['count'] += 1
+                col['peers'] = self.box_cgrp.get_peers_in_col(cell.col)
 
-        for cell in box_cgrp.cells:
             #print self.name + " adding candidate lines listeners to " + repr(cell)
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
@@ -233,11 +249,14 @@ class CandidateLines:
 
         # If any values have only 1 possible row or col within the box, we can
         # eliminate the value from other boxes in the same row or col.
-        for candidate_value in list(self.rows):
-            self._check_row_for_candidate_line(candidate_value)
-
-        for candidate_value in list(self.cols):
-            self._check_col_for_candidate_line(candidate_value)
+        # lines[value]['row'][rownum]['count'] = count
+        # lines[value]['row'][rownum]['peers'] = set of cells
+        # lines[value]['col'][colnum]['count'] = count
+        # lines[value]['col'][colnum]['peers'] = set of cells
+        for cand in list(self.lines):
+            for line_type in self.lines[cand]:
+                for linenum in self.lines[cand][line_type]:
+                    self._check_line(self.lines[cand][line_type], linenum, cand)
 
     def _check_row_for_candidate_line(self, value):
         if len(self.rows[value]) == 1:
@@ -247,7 +266,7 @@ class CandidateLines:
                     self, value, rownum)
             del self.rows[value]
             for colnum in self.box_cgrp.get_cols_outside_this_box():
-                self.puzzle.get_grid_cell(rownum, colnum
+                self.puzzle.get_cell(rownum, colnum
                         ).remove_candidate(value)
         
     # TODO fix code duplication (with block above)
@@ -269,6 +288,21 @@ class CandidateLines:
         del self.rows[value]
         del self.cols[value]
 
+    def _check_line(self, lines, linenum, value):
+        # If there is only one line in the box that
+        # the value can be on, remove this value
+        # from candidates of peers on same line.
+        
+        # Example:
+        # lines[value]['row'][rownum]['count'] = count
+        # lines[value]['row'][rownum]['peers'] = set of cells
+        line = lines[linenum]
+        if line['count'] == 1:
+            for cell in line['peers']:
+                cell.remove_candidate(value)
+        del lines[linenum]
+
+
     def cell_candidate_removed_notification(self, cell, value):
         #import pdb; pdb.set_trace()
         # LOGIC FLAWED HERE
@@ -276,9 +310,16 @@ class CandidateLines:
         #self.rows[value].remove(cell.row)
         #self._check_row_for_candidate_line(value)
 #
-#        self.cols[value].remove(cell.col)
-#        self._check_col_for_candidate_line(value)
         raise AssertionError("not implemented yet")
+
+        lines = self.lines[value]['row']
+        lines[cell.row]['count'] -= 1
+        self.check_line(lines, cell.row, value)
+
+        lines = self.lines[value]['col']
+        lines[cell.col]['count'] -= 1
+        self.check_line(lines, cell.col, value)
+
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
@@ -304,26 +345,26 @@ class Grid(object):
     def set_grid_rc_value(self, row, col, value):
         self.grid[row][col] = value
 
-    def get_grid_cell(self, row, col):
+    def get_cell(self, row, col):
         return self.grid[row][col]
 
     def get_row_cells(self, rownum):
         _row = []
         for colnum in range(self.numcols):
-            _row.append(self.get_grid_cell(rownum, colnum))
+            _row.append(self.get_cell(rownum, colnum))
         return _row
 
     def get_col_cells(self, colnum):
         _col = []
         for rownum in range(self.numrows):
-            _col.append(self.get_grid_cell(rownum, colnum))
+            _col.append(self.get_cell(rownum, colnum))
         return _col
 
     def get_box_cells(self, rownum, colnum):
         _box = []
         for boxrow in range(rownum, rownum + self.box_width):
             for boxcol in range(colnum, colnum + self.box_width):
-                _box.append(self.get_grid_cell(boxrow, boxcol))
+                _box.append(self.get_cell(boxrow, boxcol))
         return _box
 
     def to_string(self):
@@ -351,15 +392,21 @@ class Box(ConstraintGroup):
         self.boxrow = boxrow
         self.boxcol = boxcol
 
-    def get_cols_outside_this_box(self):
+    def get_peers_in_col(self, col):
         allrows = range(self.puzzle.numrows)
         box_rows = range(self.boxrow, self.boxrow + self.puzzle.box_width)
-        return set(allrows).difference(set(box_rows))
+        peers = []
+        for row in set(allrows).difference(set(box_rows)):
+            peers.append(self.puzzle.get_cell(row, col))
+        return peers
 
-    def get_rows_outside_this_box(self):
+    def get_peers_in_row(self, row):
         allcols = range(self.puzzle.numcols)
         box_cols = range(self.boxcol, self.boxcol + self.puzzle.box_width)
-        return set(allcols).difference(set(box_cols))
+        peers = []
+        for col in set(allcols).difference(set(box_cols)):
+            peers.append(self.puzzle.get_cell(row, col))
+        return peers
 
 
 class Puzzle(Grid):
@@ -464,7 +511,7 @@ class Puzzle(Grid):
 
                 for _v in _values:
                     if (_v != '-'):
-                        cell = super(Puzzle, self).get_grid_cell(_row, _col)
+                        cell = super(Puzzle, self).get_cell(_row, _col)
                         #import pdb; pdb.set_trace()
                         cell.set_value(int(_v))
                     _col = _col + 1

@@ -110,42 +110,43 @@ class TestPuzzle(unittest.TestCase):
                 'too many rows',
                 puzzle.load_from_string,
                 """
-                    -- --
-                    -- --
+                    .. ..
+                    .. ..
 
-                    -- --
-                    -- --
+                    .. ..
+                    .. ..
 
-                    -- --
+                    .. ..
                 """)
 
     def test_single_candidate(self):
         puzzle = Puzzle(2);
         puzzle.load_from_string(
             """
-            12 3-
-            -- --
+            12 3.
+            .. ..
 
-            -- --
-            -- --
+            .. ..
+            .. ..
             """
             )
         self.assertTrue(puzzle.get_cell(0, 3).value == 4)
-        #print puzzle.to_string()
+        self.assertTrue(1 not in puzzle.get_cell(0, 3))
+        #print "\n" + puzzle.to_string()
         #import pdb; pdb.set_trace()
         #puzzle.get_cell(2, 2).set_value(1)
-        #print str.join("\n", puzzle.solution)
+        #print str.join("\n", puzzle.solution_steps)
         #print puzzle.to_string()
 
     def test_single_position(self):
         puzzle = Puzzle(2);
         puzzle.load_from_string(
             """
-            1- --
-            -- --
+            1. ..
+            .. ..
 
-            -- 1-
-            -- --
+            .. 1.
+            .. ..
             """
             )
         #print "\n" + puzzle.to_string()
@@ -158,23 +159,23 @@ class TestPuzzle(unittest.TestCase):
         self.assertTrue(puzzle.get_cell(1, 3).value == 1)
         self.assertTrue(puzzle.get_cell(3, 1).value == 1)
         #print "\n" + puzzle.to_string()
-        #print str.join("\n", puzzle.solution)
+        #print str.join("\n", puzzle.solution_steps)
 
     def test_candidate_lines1(self):
         puzzle = Puzzle(3);
         puzzle.load_from_string(
             """
-            123 --- ---
-            456 --- ---
-            --- --- ---
+            123 ... ...
+            456 ... ...
+            ... ... ...
 
-            --- --- ---
-            --- --- ---
-            --- --- ---
+            ... ... ...
+            ... ... ...
+            ... ... ...
 
-            --- --- ---
-            --- --- ---
-            --- --- ---
+            ... ... ...
+            ... ... ...
+            ... ... ...
             """
             )
         print "\n" + puzzle.to_string()
@@ -185,6 +186,11 @@ class TestPuzzle(unittest.TestCase):
         self.assertTrue(8 in puzzle.get_cell(2, 6))
         self.assertTrue(9 in puzzle.get_cell(2, 6))
         puzzle.add_CandidateLines()
+        print "\n" + puzzle.to_string()
+        #import pdb; pdb.set_trace()
+        self.assertTrue(7 in puzzle.get_cell(2, 0))
+        self.assertTrue(7 in puzzle.get_cell(2, 1))
+        self.assertTrue(7 in puzzle.get_cell(2, 2))
         self.assertTrue(7 not in puzzle.get_cell(2, 3))
         self.assertTrue(8 not in puzzle.get_cell(2, 3))
         self.assertTrue(9 not in puzzle.get_cell(2, 3))
@@ -194,7 +200,7 @@ class TestPuzzle(unittest.TestCase):
 
     def test_candidate_lines2(self):
         puzzle = Puzzle(3);
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         puzzle.add_CandidateLines()
         self.assertTrue(7 in puzzle.get_cell(2, 3))
         self.assertTrue(8 in puzzle.get_cell(2, 3))
@@ -202,13 +208,17 @@ class TestPuzzle(unittest.TestCase):
         self.assertTrue(7 in puzzle.get_cell(2, 6))
         self.assertTrue(8 in puzzle.get_cell(2, 6))
         self.assertTrue(9 in puzzle.get_cell(2, 6))
-        #import pdb; pdb.set_trace()
+        print "\n" + puzzle.to_string()
+        import pdb; pdb.set_trace()
         puzzle.get_cell(0, 0).set_value(1)
         puzzle.get_cell(0, 1).set_value(2)
         puzzle.get_cell(0, 2).set_value(3)
+        print "\n" + puzzle.to_string()
         puzzle.get_cell(1, 0).set_value(4)
         puzzle.get_cell(1, 1).set_value(5)
         puzzle.get_cell(1, 2).set_value(6)
+        #print str.join("\n", puzzle.solution_steps)
+        #import pdb; pdb.set_trace()
         self.assertTrue(7 not in puzzle.get_cell(2, 3))
         self.assertTrue(8 not in puzzle.get_cell(2, 3))
         self.assertTrue(9 not in puzzle.get_cell(2, 3))

@@ -59,7 +59,7 @@ class Cell(CandidateSet):
 
     def __str__(self):
         if self.value == None:
-            return "-"
+            return "."
         else:
             return str(self.value)
 
@@ -182,23 +182,27 @@ class SinglePosition:
             self._found_value(iter(possible_cells).next(), value)
 
 
-class AutoVivification(dict):
-    """Implementation of perl's autovivification feature."""
-    def __getitem__(self, item):
-        try:
-            return dict.__getitem__(self, item)
-        except KeyError:
-            value = self[item] = type(self)()
-            return value
-
 class CandidateLines:
-
     """
-
     If the only candidates for a value in a box lie on a line (i.e. row or
     column within that box), then eliminate the value from candidates of cells
     in other boxes on the same line.
 
+    For every value not yet known in the box, cache the list of rows/cols the
+    value can be on.  For each of those rows/cols, store the list of cells
+    within the box the value can be in.
+
+    _check_line()
+        If there is only one line within the box that a value
+        can be on, remove the value
+        from the candidates of all peers on the line.
+
+    set_value()
+        Just remove the value from the cache.
+
+    cand_removed()
+        Remove the changed cell from the set of cells on the same
+        row and column for the candiate value that has been removed.
     """
 
     def __repr__(self):
@@ -208,23 +212,15 @@ class CandidateLines:
 
         assert(puzzle is not None)
         
-        # Create an index for each box listing the possible rows & columns
-        # within the box for each value not yet found.
-        # 1 rows{candidate_value} -> [ rownum1, rownum2, ...]
-        # 2 cols{candidate_value} -> [ colnum1, colnum2, ...]
+        # Structure of the internal index looks like this.
         #
-        # rows{candidate_value}{rownum}{cells} = [ cells, peers ]
-        # cols{candidate_value}{colnum} = count
-        #
-        # lines[value]['row'][rownum]['count'] = count
-        # lines[value]['row'][rownum]['peers'] = set of cells
-        # lines[value]['col'][colnum]['count'] = count
-        # lines[value]['col'][colnum]['peers'] = set of cells
+        # index[value]['row'][rownum]['cells'] = set of cells
+        # index[value]['row'][rownum]['peers'] = set of cells
+        # index[value]['col'][colnum]['cells'] = set of cells
+        # index[value]['col'][colnum]['peers'] = set of cells
         
         self.puzzle = puzzle
-        self.rows = {}      # TODO eliminate
-        self.cols = {}      # TODO eliminate
-        self.lines = AutoVivification()
+        self.index = {}
         self.box_cgrp = box_cgrp
         self.name = box_cgrp.name
 
@@ -235,68 +231,95 @@ class CandidateLines:
 
             #import pdb; pdb.set_trace()
             for cand in cell:
-                row = self.lines[cand]['row'][cell.row]
-                if 'count' not in row:
-                    row['count'] = 0
-                row['count'] += 1
-                row['peers'] = self.box_cgrp.get_peers_in_row(cell.row)
+                if cand not in self.index:
+                    self.index[cand] = dict(row=dict(), col=dict())
 
-                col = self.lines[cand]['col'][cell.col]
-                if 'count' not in col:
-                    col['count'] = 0
-                col['count'] += 1
-                col['peers'] = self.box_cgrp.get_peers_in_col(cell.col)
+                if cell.row not in self.index[cand]['row']:
+                    self.index[cand]['row'][cell.row] = {
+                        'cells': set(),
+                        'peers': self.box_cgrp.get_peers_in_row(cell.row)
+                        }
+                row = self.index[cand]['row'][cell.row]
+                row['cells'].add(cell)
+
+                if cell.col not in self.index[cand]['col']:
+                    self.index[cand]['col'][cell.col] = {
+                        'cells': set(),
+                        'peers': self.box_cgrp.get_peers_in_row(cell.col)
+                        }
+                col = self.index[cand]['col'][cell.col]
+                col['cells'].add(cell)
 
             #print self.name + " adding candidate lines listeners to " + repr(cell)
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
+        #if self.name == "Box00":
+        #    import pprint
+        #    print "Before check, Box is " + self.name
+        #    pprint.pprint(self.index)
 
         # If any values have only 1 possible row or col within the box, we can
         # eliminate the value from other boxes in the same row or col.
-        # lines[value]['row'][rownum]['count'] = count
-        # lines[value]['row'][rownum]['peers'] = set of cells
-        # lines[value]['col'][colnum]['count'] = count
-        # lines[value]['col'][colnum]['peers'] = set of cells
-        for cand in list(self.lines):
-            for line_type in self.lines[cand]:
+        #import pdb; pdb.set_trace()
+        for cand in list(self.index):
+            for line_type in self.index[cand]:
                 # use list() because we might del items as we go
-                for linenum in list(self.lines[cand][line_type]):
-                    self._check_line(self.lines[cand][line_type], linenum, cand)
+                for linenum in list(self.index[cand][line_type]):
+                    self._check_line(self.index[cand][line_type], linenum, cand)
 
-    def __repr__(self):
-        return self.name
+        #if self.name == "Box00":
+        #    import pprint
+        #    print "After check, Box is " + self.name
+        #    pprint.pprint(self.index)
 
     def cell_value_set_notification(self, cell, value):
-        del self.rows[value]
-        del self.cols[value]
+        del self.index[value]
 
     def _check_line(self, lines, linenum, value):
+        # If any value can be on only one line, remove the value
+        # from the candidates of all peers on the line.
 
         # If there is only one line in the box that the value can be on, remove
         # this value from candidates of peers on the same line.
         
-        # Example:
-        # lines[value]['row'][rownum]['count'] = count
-        # lines[value]['row'][rownum]['peers'] = set of cells
         line = lines[linenum]
-        if line['count'] == 1:
+        if len(line['cells']) == 1:
             for cell in line['peers']:
-                cell.remove_candidate(value)
-        del lines[linenum]
+                if value in cell:
+                    cell.remove_candidate(value)
+            del lines[linenum]
 
 
     #raise AssertionError("not implemented yet")
     def cell_candidate_removed_notification(self, cell, value):
-        import pdb; pdb.set_trace()
+        #if self.name == "Box00":
+        #    import pprint
+        #    print "in cand remove, Box is " + self.name
+        #    pprint.pprint(self.index)
 
-        lines = self.lines[value]['row']
-        lines[cell.row]['count'] -= 1
-        self.check_line(lines, cell.row, value)
+        if value in self.index:
 
-        lines = self.lines[value]['col']
-        lines[cell.col]['count'] -= 1
-        self.check_line(lines, cell.col, value)
+            #import pdb; pdb.set_trace()
+            lines = self.index[value]['row']
+            if cell.row in lines:
+                lines[cell.row]['cells'].remove(cell)
+                self._check_line(lines, cell.row, value)
+
+#            if self.name == "Box00":
+#                import pprint
+#                print "after check row Box is " + self.name
+#                pprint.pprint(self.index)
+
+            lines = self.index[value]['col']
+            if cell.col in lines:
+                lines[cell.col]['cells'].remove(cell)
+                self._check_line(lines, cell.col, value)
+
+            #if self.name == "Box00":
+            #    import pprint
+            #    print "after check col Box is " + self.name
+            #    pprint.pprint(self.index)
 
 
 
@@ -352,12 +375,15 @@ class Grid(object):
             if rownum > 0:
                 s = s + "\n"
                 if rownum % self.box_width == 0:
-                    s = s + "\n"
+                    s = s + '+'.join(["-"*10*self.box_width]*self.box_width) + "\n"
             colnum = 0
             for cell in self.get_row_cells(rownum):
                 if colnum > 0 and colnum % self.box_width == 0:
-                    s = s + " "
-                s = s + str(cell)
+                    s = s + "|"
+                if cell.value is None:
+                    s = s + ''.join(str(x) for x in sorted(cell)).center(10, " ")
+                else:
+                    s = s + str(cell.value).center(10, " ")
                 colnum = colnum + 1
         return s
 
@@ -391,7 +417,7 @@ class Box(ConstraintGroup):
 class Puzzle(Grid):
 
     def __init__(self, box_width):
-        self.solution = []
+        self.solution_steps = []
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
@@ -405,8 +431,8 @@ class Puzzle(Grid):
         raise AssertionError("Not implemented yet")     # TODO
 
     def log_solution_step(self, string):
-        #print "solution " + string
-        self.solution.append(string)
+        #print "solution_steps " + string
+        self.solution_steps.append(string)
 
     def _add_constraint_groups(self):
         self.cgrps = []     # all constraint groups
@@ -440,8 +466,10 @@ class Puzzle(Grid):
             dummy = SinglePosition(cgrp, puzzle=self)
 
     def add_CandidateLines(self):
+        self.candidate_lines = []
         for box_cgrp in self.box_cgrps:
-            dummy = CandidateLines(box_cgrp, puzzle=self)
+            cl = CandidateLines(box_cgrp, puzzle=self)
+            self.candidate_lines.append(cl)
 
     def load_from_iterable(self, iterable):
         _row = 0
@@ -489,7 +517,7 @@ class Puzzle(Grid):
                 _values = struct.unpack('c' * self.box_width, _word)
 
                 for _v in _values:
-                    if (_v != '-'):
+                    if (_v != '.'):
                         cell = super(Puzzle, self).get_cell(_row, _col)
                         #import pdb; pdb.set_trace()
                         cell.set_value(int(_v))

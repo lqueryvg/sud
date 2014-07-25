@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
 
+import logging
+import pprint
 
 class SingleCandidate(Exception):
     # Only one candidate remains after remove.
@@ -55,6 +57,7 @@ class Cell(CandidateSet):
         return self.value
 
     def __repr__(self):
+        #return self.name + "(" + "".join(str(x) for x in sorted(self)) + ")"
         return self.name
 
     def __str__(self):
@@ -64,7 +67,10 @@ class Cell(CandidateSet):
             return str(self.value)
 
     def set_value(self, value):
+        logging.info("%s set_value(%s)", self.name, value)
+        #import pdb; pdb.set_trace()
         if self.value is not None:
+            logging.info("%s set_value(%s) already set", self.name, value)
             return
 
         if value not in self:
@@ -74,6 +80,10 @@ class Cell(CandidateSet):
 
         self.clear()    # remove all candidates
         for lsnr in self.cell_value_set_listeners:
+            logging.info(
+            "{} set_value({}) calling listener {}".format(
+                    self.name, value, repr(lsnr))
+            )
             lsnr.cell_value_set_notification(self, value)
 
         # delete all listeners, since there can be no further changes
@@ -83,10 +93,14 @@ class Cell(CandidateSet):
 
     def remove_candidate(self, value):
         #print "in cell remove_candidate"
+        logging.debug("Cell remove_candidate() %s from %s",
+                value, self.name)
         super(Cell, self).remove_candidate(value)
         for lsnr in self.candidate_removed_listeners:
-            #print "{} remove_candidate({}) calling listener {}".format(
-            #        self.name, value, repr(lsnr))
+            logging.debug(
+            "{} remove_candidate({}) calling listener {}".format(
+                    self.name, value, repr(lsnr))
+            )
             lsnr.cell_candidate_removed_notification(self, value)
 
 
@@ -223,8 +237,12 @@ class CandidateLines:
         self.index = {}
         self.box_cgrp = box_cgrp
         self.name = box_cgrp.name
+        logging.info("in CandidateLines.__init__(), self.name = %s", self.name)
 
         for cell in box_cgrp.cells:
+            logging.info("in CandidateLines.__init__(), cell = %s[%s]",
+                    repr(cell), "".join(str(x) for x in sorted(cell))
+                    )
             if cell.value is not None:
                 raise AssertionError("Unexpected value in cgrp cell;"
                         " only cells without a value should be in a cgrp.")
@@ -254,8 +272,11 @@ class CandidateLines:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
-        #if self.name == "Box00":
-        #    import pprint
+        logging.debug(
+                    "in CandidateLines.__init__(), index =\n%s",
+                    pprint.pformat(self.index)
+                )
+        #import pprint
         #    print "Before check, Box is " + self.name
         #    pprint.pprint(self.index)
 
@@ -263,10 +284,17 @@ class CandidateLines:
         # eliminate the value from other boxes in the same row or col.
         #import pdb; pdb.set_trace()
         for cand in list(self.index):
-            for line_type in self.index[cand]:
+            for line_type in list(self.index[cand]):
                 # use list() because we might del items as we go
-                for linenum in list(self.index[cand][line_type]):
-                    self._check_line(self.index[cand][line_type], linenum, cand)
+                #for linenum in list(self.index[cand][line_type]):
+                #    self._check_line(self.index[cand][line_type], linenum, cand)
+                if len(self.index[cand][line_type]) == 1:
+                    #import pdb; pdb.set_trace()
+                    linenum, line = self.index[cand][line_type].popitem()
+                    for cell in line['peers']:
+                        if cand in cell:
+                            cell.remove_candidate(cand)
+                    del self.index[cand][line_type]
 
         #if self.name == "Box00":
         #    import pprint
@@ -274,53 +302,77 @@ class CandidateLines:
         #    pprint.pprint(self.index)
 
     def cell_value_set_notification(self, cell, value):
+        logging.info("CandidateLines.cell_value_set_notification()")
+        logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
+
         del self.index[value]
 
-    def _check_line(self, lines, linenum, value):
-        # If any value can be on only one line, remove the value
-        # from the candidates of all peers on the line.
+        logging.info("  index =\n%s", pprint.pformat(self.index))
+        #import pdb; pdb.set_trace()
+        # Delete this cell from the index.
+        for cand_value in self.index:
+            if cell in self.index[cand_value]['row'][cell.row]['cells']:
+                self.index[cand_value]['row'][cell.row]['cells'].remove(cell)
+                self._check_line(cand_value, 'row', cell.row)
 
-        # If there is only one line in the box that the value can be on, remove
-        # this value from candidates of peers on the same line.
-        
-        line = lines[linenum]
-        if len(line['cells']) == 1:
-            for cell in line['peers']:
-                if value in cell:
-                    cell.remove_candidate(value)
-            del lines[linenum]
+            if cell in self.index[cand_value]['col'][cell.col]['cells']:
+                self.index[cand_value]['col'][cell.col]['cells'].remove(cell)
+                self._check_line(cand_value, 'col', cell.col)
 
+        logging.info(
+                    "in CandidateLines.cell_value_set_notification(), modified index =\n%s",
+                    pprint.pformat(self.index)
+                )
 
-    #raise AssertionError("not implemented yet")
+    def _check_line(self, value, line_type, line_num):
+
+        logging.info("  _check_line %s %s for value %s",
+                line_type, line_num, value)
+        if len(self.index[value][line_type][line_num]['cells']) == 0:
+            logging.info("    no more cells for value")
+
+            del self.index[value][line_type][line_num]
+
+            if len(self.index[value][line_type]) == 1:
+                linenum, line = self.index[value][line_type].popitem()
+                logging.info("    delete %s %s", line_type, linenum)
+                logging.info("    removing peers")
+                import pdb; pdb.set_trace()
+                for peer_cell in line['peers']:
+                    if value in peer_cell:
+                        peer_cell.remove_candidate(value)
+                del self.index[value][line_type]
+
     def cell_candidate_removed_notification(self, cell, value):
+        """
+        Remove the changed cell from the set of cells on the same
+        row and column for the candiate value that has been removed.
+        """
         #if self.name == "Box00":
         #    import pprint
         #    print "in cand remove, Box is " + self.name
         #    pprint.pprint(self.index)
 
+        logging.info("CandidateLines.cell_candidate_removed_notification()")
+        logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
+
         if value in self.index:
 
+            logging.info("  value is in index")
             #import pdb; pdb.set_trace()
-            lines = self.index[value]['row']
-            if cell.row in lines:
-                lines[cell.row]['cells'].remove(cell)
-                self._check_line(lines, cell.row, value)
+            if 'row' in self.index[value]:
+                lines = self.index[value]['row']
+                if cell.row in lines:
+                    logging.info("  removing from cells for row %s", cell.row)
+                    lines[cell.row]['cells'].remove(cell)
+                    self._check_line(value, 'row', cell.row)
 
-#            if self.name == "Box00":
-#                import pprint
-#                print "after check row Box is " + self.name
-#                pprint.pprint(self.index)
-
-            lines = self.index[value]['col']
-            if cell.col in lines:
-                lines[cell.col]['cells'].remove(cell)
-                self._check_line(lines, cell.col, value)
-
-            #if self.name == "Box00":
-            #    import pprint
-            #    print "after check col Box is " + self.name
-            #    pprint.pprint(self.index)
-
+            if 'col' in self.index[value]:
+                lines = self.index[value]['col']
+                if cell.col in lines:
+                    logging.info("  removing from cells for col %s", cell.col)
+                    lines[cell.col]['cells'].remove(cell)
+                    self._check_line(value, 'col', cell.col)
 
 
 # Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
@@ -466,6 +518,7 @@ class Puzzle(Grid):
             dummy = SinglePosition(cgrp, puzzle=self)
 
     def add_CandidateLines(self):
+        logging.info("add_CandidateLines() called")
         self.candidate_lines = []
         for box_cgrp in self.box_cgrps:
             cl = CandidateLines(box_cgrp, puzzle=self)

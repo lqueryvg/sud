@@ -4,6 +4,16 @@
 from sud2 import *
 import unittest
 
+def init_logging():
+    import logging
+
+    hdlr = logging.StreamHandler()
+    hdlr.setFormatter(
+        logging.Formatter("%(levelname)s %(message)s")
+    )
+    logging.getLogger().addHandler(hdlr)
+
+init_logging()
 
 class TestCandidateSet(unittest.TestCase):
     def test_constructor_zero_elements(self):
@@ -178,19 +188,22 @@ class TestPuzzle(unittest.TestCase):
             ... ... ...
             """
             )
-        print "\n" + puzzle.to_string()
         self.assertTrue(7 in puzzle.get_cell(2, 3))
         self.assertTrue(8 in puzzle.get_cell(2, 3))
         self.assertTrue(9 in puzzle.get_cell(2, 3))
         self.assertTrue(7 in puzzle.get_cell(2, 6))
         self.assertTrue(8 in puzzle.get_cell(2, 6))
         self.assertTrue(9 in puzzle.get_cell(2, 6))
+        #logging.getLogger().setLevel(logging.INFO)
+        logging.info("Before puzzle.add_CandidateLines:\n" + puzzle.to_string())
         puzzle.add_CandidateLines()
-        print "\n" + puzzle.to_string()
+        logging.info("After puzzle.add_CandidateLines:\n" + puzzle.to_string())
         #import pdb; pdb.set_trace()
+        #logging.getLogger().setLevel(logging.CRITICAL)
         self.assertTrue(7 in puzzle.get_cell(2, 0))
         self.assertTrue(7 in puzzle.get_cell(2, 1))
         self.assertTrue(7 in puzzle.get_cell(2, 2))
+        self.assertTrue(7 in puzzle.get_cell(0, 3))
         self.assertTrue(7 not in puzzle.get_cell(2, 3))
         self.assertTrue(8 not in puzzle.get_cell(2, 3))
         self.assertTrue(9 not in puzzle.get_cell(2, 3))
@@ -208,15 +221,21 @@ class TestPuzzle(unittest.TestCase):
         self.assertTrue(7 in puzzle.get_cell(2, 6))
         self.assertTrue(8 in puzzle.get_cell(2, 6))
         self.assertTrue(9 in puzzle.get_cell(2, 6))
-        print "\n" + puzzle.to_string()
-        import pdb; pdb.set_trace()
+        logging.getLogger().setLevel(logging.INFO)
+        #import pdb; pdb.set_trace()
+        logging.info("Before set_value(0,0,1):\n" + puzzle.to_string())
         puzzle.get_cell(0, 0).set_value(1)
+        logging.info("After set_value(0,0,1):\n" + puzzle.to_string())
         puzzle.get_cell(0, 1).set_value(2)
+        logging.info("After set_value(0,1,2):\n" + puzzle.to_string())
+        import pdb; pdb.set_trace()
         puzzle.get_cell(0, 2).set_value(3)
-        print "\n" + puzzle.to_string()
         puzzle.get_cell(1, 0).set_value(4)
         puzzle.get_cell(1, 1).set_value(5)
+        logging.info("After set_value(1,1,5):\n" + puzzle.to_string())
         puzzle.get_cell(1, 2).set_value(6)
+        logging.info("After set_value calls:\n" + puzzle.to_string())
+        logging.getLogger().setLevel(logging.CRITICAL)
         #print str.join("\n", puzzle.solution_steps)
         #import pdb; pdb.set_trace()
         self.assertTrue(7 not in puzzle.get_cell(2, 3))

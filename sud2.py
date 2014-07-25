@@ -8,13 +8,14 @@ class SingleCandidate(Exception):
     pass
 
 class CandidateSet(set):
-    # Like a Set but raises exceptions when:
-    # - trying to remove final element
-    # - only 1 element remains after removing an element (i.e.
-    #   we have found the only remaining possible candidate)
-    # - trying to initialise with less than 2 candidate values
+    """
+    Like a Set but raises exceptions when:
+    - trying to remove final element
+    - only 1 element remains after removing an element (i.e.
+      we have found the only remaining possible candidate)
+    - trying to initialise with less than 2 candidate values
+    """
 
-    # Specialised code.
     def __init__(self, candidate_values):
         if len(candidate_values) < 2:
             raise AssertionError("At least two candidates required")
@@ -29,9 +30,12 @@ class CandidateSet(set):
             raise SingleCandidate
 
 
-# TODO CandidateSet should maybe be a member rather than a superclass.
-# I'm not sure it seems natural for candidates to be "in" a cell.
 class Cell(CandidateSet):
+    """
+    TODO CandidateSet should maybe be a member rather than a superclass.  I'm
+    not sure it seems natural for candidates to be "in" a cell.
+    """
+
     def __init__(self, candidate_values, row=-1, col=-1):
         super(Cell, self).__init__(candidate_values)
         self.value = None
@@ -138,9 +142,11 @@ class ConstraintGroup(object):
                                 "SingleCandidate {} value is {}".format(
                                     cell.name, cell.value))
 
-# When a value has been eliminated from the candidates of all except
-# one cell in a constraint group.
 class SinglePosition:
+    """
+    Detects when a value has been eliminated from the candidates of all except
+    one cell in a constraint group.
+    """
     def __init__(self, cgrp, puzzle=None):
         # Create a dictionary of possible cells
         # for each possible value in a constraint group.
@@ -198,25 +204,13 @@ class SinglePosition:
 
 class CandidateLines:
     """
-    If the only candidates for a value in a box lie on a line (i.e. row or
-    column within that box), then eliminate the value from candidates of cells
-    in other boxes on the same line.
+    Detects when the only candidates for a value in a box lie on a line (i.e.
+    a row or column within that box) and if so eliminates the value from
+    candidates of cells in other boxes on the same line.
 
-    For every value not yet known in the box, cache the list of rows/cols the
-    value can be on.  For each of those rows/cols, store the list of cells
+    For every value not yet known in the box, index the list of rows and cols
+    the value can be on.  For each of those rows/cols, store the list of cells
     within the box the value can be in.
-
-    _check_line()
-        If there is only one line within the box that a value
-        can be on, remove the value
-        from the candidates of all peers on the line.
-
-    set_value()
-        Just remove the value from the cache.
-
-    cand_removed()
-        Remove the changed cell from the set of cells on the same
-        row and column for the candiate value that has been removed.
     """
 
     def __repr__(self):
@@ -287,7 +281,7 @@ class CandidateLines:
             for line_type in list(self.index[cand]):
                 # use list() because we might del items as we go
                 #for linenum in list(self.index[cand][line_type]):
-                #    self._check_line(self.index[cand][line_type], linenum, cand)
+                #    self.check_line(self.index[cand][line_type], linenum, cand)
                 if len(self.index[cand][line_type]) == 1:
                     #import pdb; pdb.set_trace()
                     linenum, line = self.index[cand][line_type].popitem()
@@ -302,6 +296,14 @@ class CandidateLines:
         #    pprint.pprint(self.index)
 
     def cell_value_set_notification(self, cell, value):
+        """
+        Once the position of a value is known, delete
+        it from the index, and also delete the cell from the lists
+        of cells within the index.
+        Each time the cell is deleted, use check_line() to
+        see if a CandidateLine condition has been found.
+        """
+
         logging.info("CandidateLines.cell_value_set_notification()")
         logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
 
@@ -313,20 +315,26 @@ class CandidateLines:
         for cand_value in self.index:
             if cell in self.index[cand_value]['row'][cell.row]['cells']:
                 self.index[cand_value]['row'][cell.row]['cells'].remove(cell)
-                self._check_line(cand_value, 'row', cell.row)
+                self.check_line(cand_value, 'row', cell.row)
 
             if cell in self.index[cand_value]['col'][cell.col]['cells']:
                 self.index[cand_value]['col'][cell.col]['cells'].remove(cell)
-                self._check_line(cand_value, 'col', cell.col)
+                self.check_line(cand_value, 'col', cell.col)
 
         logging.info(
-                    "in CandidateLines.cell_value_set_notification(), modified index =\n%s",
+                    "in CandidateLines.cell_value_set_notification(),"
+                    "modified index =\n%s",
                     pprint.pformat(self.index)
                 )
 
-    def _check_line(self, value, line_type, line_num):
+    def check_line(self, value, line_type, line_num):
+        """
+        If there is only one line within the box that a value
+        can be on, remove the value
+        from the candidates of all peers on the line.
+        """
 
-        logging.info("  _check_line %s %s for value %s",
+        logging.info("  check_line %s %s for value %s",
                 line_type, line_num, value)
         if len(self.index[value][line_type][line_num]['cells']) == 0:
             logging.info("    no more cells for value")
@@ -337,7 +345,7 @@ class CandidateLines:
                 linenum, line = self.index[value][line_type].popitem()
                 logging.info("    delete %s %s", line_type, linenum)
                 logging.info("    removing peers")
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 for peer_cell in line['peers']:
                     if value in peer_cell:
                         peer_cell.remove_candidate(value)
@@ -365,26 +373,30 @@ class CandidateLines:
                 if cell.row in lines:
                     logging.info("  removing from cells for row %s", cell.row)
                     lines[cell.row]['cells'].remove(cell)
-                    self._check_line(value, 'row', cell.row)
+                    self.check_line(value, 'row', cell.row)
 
             if 'col' in self.index[value]:
                 lines = self.index[value]['col']
                 if cell.col in lines:
                     logging.info("  removing from cells for col %s", cell.col)
                     lines[cell.col]['cells'].remove(cell)
-                    self._check_line(value, 'col', cell.col)
+                    self.check_line(value, 'col', cell.col)
 
-
-# Note: Grid knows nothing about Cells.  Grid implements a grid of values (not
-# to be confused with Cell values) and provides a way of accessing them
-# individually or as groups (rows, columns or boxes).  It just so happens that
-# when used by the Puzzle, the grid values are references to Cell objects.
 
 class Grid(object):
-    def __init__(self, box_width):
+    """
+    Implements a grid of values (not to be confused with Cell values) and
+    provides a way of accessing them individually or as groups (rows, columns
+    or boxes).  When used by Puzzle, the grid values are references to Cell
+    objects.
+    """
 
-        # list of lists, as [row][col]
-        # coords start at 0
+    def __init__(self, box_width):
+        """
+        Internally a list of lists, as [row][col].
+        Coords start at 0.
+        """
+
         self.grid = []
         self.numcols = self.numrows = box_width ** 2
         self.box_width = box_width
@@ -394,8 +406,10 @@ class Grid(object):
                 row.append(None)
             self.grid.append(row)
 
-    # index by row then column
     def set_grid_rc_value(self, row, col, value):
+        """
+        Index by row then column.
+        """
         self.grid[row][col] = value
 
     def get_cell(self, row, col):
@@ -442,6 +456,14 @@ class Grid(object):
 
 class Box(ConstraintGroup):
     def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
+        """
+        TODO: I don't think it's good that Box inherits from
+        ConstraintGroup. I thikn this might trigger additional
+        cell change notifications.
+
+        Row and col match the address of the top left cell in the box.
+        The box name encodes the same.
+        """
         assert(puzzle is not None)
         super(Box, self).__init__(cells, puzzle,
                 name = "Box" + str(boxrow) + str(boxcol)
@@ -450,6 +472,9 @@ class Box(ConstraintGroup):
         self.boxcol = boxcol
 
     def get_peers_in_col(self, col):
+        """
+        'Peers' are cells in the specified line but not in this box.
+        """
         allrows = range(self.puzzle.numrows)
         box_rows = range(self.boxrow, self.boxrow + self.puzzle.box_width)
         peers = []
@@ -477,10 +502,16 @@ class Puzzle(Grid):
                     rownum, colnum, Cell(range(1, self.numrows + 1),
                         row=rownum, col=colnum)
                 )
+        # TODO add constraint groups seperately to enable
+        # TODO techniques to be tested in isolation
         self._add_constraint_groups()
 
     def add_index():
-        raise AssertionError("Not implemented yet")     # TODO
+        """
+        TODO Generic method to add a solving technique.
+        """
+
+        raise AssertionError("Not implemented yet")
 
     def log_solution_step(self, string):
         #print "solution_steps " + string

@@ -15,6 +15,8 @@ def init_logging():
 
 init_logging()
 
+
+# TODO need to be able to compare partial solution against and expected outcome
 class TestCandidateSet(unittest.TestCase):
     def test_constructor_zero_elements(self):
         self.assertRaisesRegexp(AssertionError,

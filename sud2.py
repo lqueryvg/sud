@@ -45,6 +45,13 @@ class Cell(CandidateSet):
         self.cell_value_set_listeners = []
         self.candidate_removed_listeners = []
 
+    def init_candidates(self, candidate_values):
+        if (self.value is not None or len(super(Cell, self)) != 0):
+            raise Exception("init_candidates() called when value or "
+                    "candidates already set")
+        super(Cell, self).clear()
+        super(Cell, self).__init__(candidate_values)
+
     def add_cell_value_set_listener(self, lsnr):
         self.cell_value_set_listeners.append(lsnr)
 
@@ -556,6 +563,12 @@ class Puzzle(Grid):
             self.candidate_lines.append(cl)
 
     def load_from_iterable(self, iterable):
+        """
+        Each line is split into words.
+        Each word represents a row of a box and since
+        all boxes should be the same width, each word
+        should be the same number of characters.
+        """
         _row = 0
         for _line in iterable:
             import re
@@ -563,10 +576,6 @@ class Puzzle(Grid):
             # support script style comments with '#'
             re.sub(r"#.*$", '', _line)  # strip them
 
-            # Each line is split into words.
-            # Each word represents a row of a box and since
-            # all boxes should be the same width, each word
-            # should be the same number of characters.
             _box_words = _line.split()
             _num_box_words = len(_box_words)
 
@@ -615,6 +624,52 @@ class Puzzle(Grid):
 
     def load_from_file(self, pathname):
         self.load_from_iterable(open(pathname))
+
+    def load_candidates_from_iterable(self, iterable):
+        """
+        Each line is split into words.
+        Each word represents a cells candates (any order but no spaces).
+        """
+        _row = 0
+        for _line in iterable:
+            import re
+
+            # support script style comments with '#'
+            re.sub(r"#.*$", '', _line)  # strip them
+
+            _cell_words = _line.split()
+            _num_cells = len(_cell_words)
+
+            if _num_cells == 0:
+                continue        # skip blank lines
+
+            if (_row >= self.numrows):
+                raise PuzzleParseError(
+                        'Row {}: too many rows, expected {}.'.format(
+                            _row, self.numrows)
+                        )
+
+            if _num_cells != self.box_width**2:
+                #import pdb; pdb.set_trace()
+                raise PuzzleParseError(
+                    ('Row {}: expect {} words (one per cell); '
+                    + 'found {}.').format(
+                        _row, self.box_width**2, _num_cells
+                ))
+
+            for _word in _cell_words:
+                cell = super(Puzzle, self).get_cell(_row, _col)
+                cell.init_candidates(list(_word))
+
+            _row = _row + 1
+        return
+
+    def load_candidates_from_string(self, string):
+        self.load_candidates_from_iterable(iter(string.splitlines()))
+
+    def load_candidates_from_file(self, pathname):
+        self.load_candidates_from_iterable(open(pathname))
+
 
 
 class PuzzleParseError(Exception):

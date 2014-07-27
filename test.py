@@ -230,7 +230,7 @@ class TestPuzzle(unittest.TestCase):
         logging.info("After set_value(0,0,1):\n" + puzzle.to_string())
         puzzle.get_cell(0, 1).set_value(2)
         logging.info("After set_value(0,1,2):\n" + puzzle.to_string())
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         puzzle.get_cell(0, 2).set_value(3)
         puzzle.get_cell(1, 0).set_value(4)
         puzzle.get_cell(1, 1).set_value(5)

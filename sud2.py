@@ -17,40 +17,47 @@ class CandidateSet(set):
     """
 
     def __init__(self, candidate_values):
-        if len(candidate_values) < 2:
-            raise AssertionError("At least two candidates required")
+        #if len(candidate_values) < 2:
+        #    raise AssertionError("At least two candidates required")
         super(CandidateSet, self).__init__(candidate_values)
 
     def remove_candidate(self, value):
+        #import pdb; pdb.set_trace()
         if len(self) == 1:
             raise AssertionError("Attempt to remove final candidate")
         super(CandidateSet, self).remove(value)
+        #self.remove(value)
 
         if len(self) == 1:
             raise SingleCandidate
 
 
-class Cell(CandidateSet):
+class Cell():
     """
     TODO CandidateSet should maybe be a member rather than a superclass.  I'm
     not sure it seems natural for candidates to be "in" a cell.
     """
 
     def __init__(self, candidate_values, row=-1, col=-1):
-        super(Cell, self).__init__(candidate_values)
+        #super(Cell, self).__init__(candidate_values)
         self.value = None
         self.name = "Cell{}{}".format(row, col)
         self.row = row
         self.col = col
+        self.candidates = CandidateSet(candidate_values)
         self.cell_value_set_listeners = []
         self.candidate_removed_listeners = []
 
-    def init_candidates(self, candidate_values):
-        if (self.value is not None or len(super(Cell, self)) != 0):
-            raise Exception("init_candidates() called when value or "
+    def set_candidates(self, candidate_values):
+        #if (self.value is not None or len(list(super(Cell, super(self))) != 0):
+        if (self.value is not None or len(self.candidates)):
+            import pdb; pdb.set_trace()
+            raise Exception("set_candidates() called when value or "
                     "candidates already set")
-        super(Cell, self).clear()
-        super(Cell, self).__init__(candidate_values)
+        #super(Cell, self).clear()
+        #super(Cell, self).__init__(candidate_values)
+        self.candidates.clear()
+        self.candidates = CandidateSet(candidate_values)
 
     def add_cell_value_set_listener(self, lsnr):
         self.cell_value_set_listeners.append(lsnr)
@@ -84,12 +91,13 @@ class Cell(CandidateSet):
             logging.info("%s set_value(%s) already set", self.name, value)
             return
 
-        if value not in self:
+        #if value not in self:
+        if value not in self.candidates:
             raise AssertionError("Value is not a candidate")
 
         self.value = value
 
-        self.clear()    # remove all candidates
+        self.candidates.clear()    # remove all candidates
         for lsnr in self.cell_value_set_listeners:
             logging.info(
             "{} set_value({}) calling listener {}".format(
@@ -103,10 +111,10 @@ class Cell(CandidateSet):
         del self.candidate_removed_listeners[:]
 
     def remove_candidate(self, value):
-        #print "in cell remove_candidate"
         logging.debug("Cell remove_candidate() %s from %s",
                 value, self.name)
-        super(Cell, self).remove_candidate(value)
+        #super(Cell, self).remove_candidate(value)
+        self.candidates.remove_candidate(value)
         for lsnr in self.candidate_removed_listeners:
             logging.debug(
             "{} remove_candidate({}) calling listener {}".format(
@@ -134,7 +142,7 @@ class ConstraintGroup(object):
             # group has already deleted the candidate value
             # from this cell, so only remove candidate if
             # already there, otherwise we'll get a key error.
-            if value in cell:
+            if value in cell.candidates:
                 if self.puzzle is not None:
                     self.puzzle.log_solution_step(
                             "RemoveCandidate {} from {} {}".format(
@@ -143,7 +151,7 @@ class ConstraintGroup(object):
                     cell.remove_candidate(value)
                 except SingleCandidate:
                     # list(my_set)[0] grabs any value from a set
-                    cell.set_value(list(cell)[0])
+                    cell.set_value(list(cell.candidates)[0])
                     if self.puzzle is not None:
                         self.puzzle.log_solution_step(
                                 "SingleCandidate {} value is {}".format(
@@ -169,7 +177,8 @@ class SinglePosition:
                 #import pdb; pdb.set_trace()
                 raise AssertionError("Unexpected value in cgrp cell;"
                         " only cells without a value should be in a cgrp.")
-            for candidate_value in cell:
+            #for candidate_value in cell:
+            for candidate_value in cell.candidates:
                 if candidate_value in self.possible_values:
                     self.possible_values.get(candidate_value).add(cell)
                 else:
@@ -242,14 +251,14 @@ class CandidateLines:
 
         for cell in box_cgrp.cells:
             logging.info("in CandidateLines.__init__(), cell = %s[%s]",
-                    repr(cell), "".join(str(x) for x in sorted(cell))
+                    repr(cell), "".join(str(x) for x in sorted(cell.candidates))
                     )
             if cell.value is not None:
                 raise AssertionError("Unexpected value in cgrp cell;"
                         " only cells without a value should be in a cgrp.")
 
             #import pdb; pdb.set_trace()
-            for cand in cell:
+            for cand in cell.candidates:
                 if cand not in self.index:
                     self.index[cand] = dict(row=dict(), col=dict())
 
@@ -293,7 +302,7 @@ class CandidateLines:
                     #import pdb; pdb.set_trace()
                     linenum, line = self.index[cand][line_type].popitem()
                     for cell in line['peers']:
-                        if cand in cell:
+                        if cand in cell.candidates:
                             cell.remove_candidate(cand)
                     del self.index[cand][line_type]
 
@@ -354,7 +363,7 @@ class CandidateLines:
                 logging.info("    removing peers")
                 #import pdb; pdb.set_trace()
                 for peer_cell in line['peers']:
-                    if value in peer_cell:
+                    if value in peer_cell.candidates:
                         peer_cell.remove_candidate(value)
                 del self.index[value][line_type]
 
@@ -454,7 +463,7 @@ class Grid(object):
                 if colnum > 0 and colnum % self.box_width == 0:
                     s = s + "|"
                 if cell.value is None:
-                    s = s + ''.join(str(x) for x in sorted(cell)).center(10, " ")
+                    s = s + ''.join(str(x) for x in sorted(cell.candidates)).center(10, " ")
                 else:
                     s = s + str(cell.value).center(10, " ")
                 colnum = colnum + 1
@@ -506,12 +515,19 @@ class Puzzle(Grid):
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
                 super(Puzzle, self).set_grid_rc_value(
-                    rownum, colnum, Cell(range(1, self.numrows + 1),
-                        row=rownum, col=colnum)
+#                    rownum, colnum, Cell(range(1, self.numrows + 1),
+                    rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         # TODO add constraint groups seperately to enable
         # TODO techniques to be tested in isolation
         self._add_constraint_groups()
+
+    def init_all_candidates(self):
+        for rownum in range(self.numrows):
+            for colnum in range(self.numcols):
+                super(Puzzle, self).get_cell(rownum, colnum).set_candidates(
+                        range(1, self.numrows + 1)
+                )
 
     def add_index():
         """
@@ -591,7 +607,7 @@ class Puzzle(Grid):
             if _num_box_words != self.box_width:
                 #import pdb; pdb.set_trace()
                 raise PuzzleParseError(
-                    ('Row {}: expect {} words (one per box); '
+                    ('Row {}: unexpected number of words; expect {} words (one per box); '
                     + 'found {}.').format(
                         _row, self.box_width, _num_box_words
                 ))
@@ -614,7 +630,7 @@ class Puzzle(Grid):
                         cell = super(Puzzle, self).get_cell(_row, _col)
                         #import pdb; pdb.set_trace()
                         cell.set_value(int(_v))
-                    _col = _col + 1
+                    _col += + 1
 
             _row = _row + 1
         return
@@ -627,8 +643,10 @@ class Puzzle(Grid):
 
     def load_candidates_from_iterable(self, iterable):
         """
-        Each line is split into words.
+        Each line is split on whitespace into words.
         Each word represents a cells candates (any order but no spaces).
+        Any char in a word which is not in the valid range for a candidate
+        (e.g. 1-9) is ignored.
         """
         _row = 0
         for _line in iterable:
@@ -652,14 +670,21 @@ class Puzzle(Grid):
             if _num_cells != self.box_width**2:
                 #import pdb; pdb.set_trace()
                 raise PuzzleParseError(
-                    ('Row {}: expect {} words (one per cell); '
-                    + 'found {}.').format(
-                        _row, self.box_width**2, _num_cells
+                    ('Row {}: unexpected number of words; expect {} (one per cell); '
+                    + 'found {}.\nline is {}').format(
+                        _row, self.box_width**2, _num_cells, _line
                 ))
 
+            _col = 0
+            #import pdb; pdb.set_trace()
+            _valid_candidate_values = set(range(1, self.numrows + 1))
             for _word in _cell_words:
                 cell = super(Puzzle, self).get_cell(_row, _col)
-                cell.init_candidates(list(_word))
+                _word_candidates = list(_word)
+                # ignore invalid candidate values
+                if set(_word_candidates).issubset(_valid_candidate_values):
+                    cell.set_candidates(_word_candidates)
+                _col += + 1
 
             _row = _row + 1
         return
@@ -669,7 +694,6 @@ class Puzzle(Grid):
 
     def load_candidates_from_file(self, pathname):
         self.load_candidates_from_iterable(open(pathname))
-
 
 
 class PuzzleParseError(Exception):

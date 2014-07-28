@@ -12,8 +12,6 @@ def init_logging():
     )
     logging.getLogger().addHandler(hdlr)
 
-init_logging()
-
 
 class TestCandidateSet(unittest.TestCase):
     def suppress_test_constructor_zero_elements(self):
@@ -72,44 +70,59 @@ class TestCell(unittest.TestCase):
         self.assertTrue(3 in obj.candidates)
 
 
-class TestConstraintGroup(unittest.TestCase):
+class TestUniqueConstraints(unittest.TestCase):
     def setUp(self):
         #logging.getLogger().setLevel(logging.DEBUG)
         pass
 
-    def test_notify(self):
+    def test_unique_constraint(self):
         #import pdb; pdb.set_trace()
         cell00 = Cell([1, 2], row=0, col=0)
         cell01 = Cell([1, 2], row=0, col=1)
-        grp = ConstraintGroup([cell00, cell01])
+        grp = UniqueConstraint([cell00, cell01])
         cell00.set_value(1)
         self.assertTrue(cell01.get_value() == 2)
 
     def tearDown(self):
-        #logging.getLogger().setLevel(logging.CRITICAL)
+        logging.getLogger().setLevel(logging.CRITICAL)
         pass
 
 
 class TestGrid(unittest.TestCase):
     def test_grid_rc(self):
         grid = Grid(2)
-        grid.set_grid_rc_value(0, 0, 1)
-        grid.set_grid_rc_value(0, 1, 2)
-        grid.set_grid_rc_value(1, 0, 3)
+        for (r, c, v) in [
+                            (0, 0, 1),
+                            (0, 1, 2),
+                            (1, 0, 3),
+                            (1, 1, 4)
+        ]:
+            grid.set_grid_rc_value(r, c, v)
         grid.set_grid_rc_value(1, 1, 4)
-        self.assertTrue(grid.get_cell(0, 0) == 1)
-        self.assertTrue(grid.get_cell(0, 1) == 2)
-        self.assertTrue(grid.get_cell(1, 0) == 3)
-        self.assertTrue(grid.get_cell(1, 1) == 4)
+
+        self.assertTrue(
+            (
+                grid.get_cell(0, 0),
+                grid.get_cell(0, 1),
+                grid.get_cell(1, 0),
+                grid.get_cell(1, 1)
+            ) == (1, 2, 3, 4)
+        )
 
     def test_get_box_cells(self):
         grid = Grid(2)
-        grid.set_grid_rc_value(0, 0, 1)
-        grid.set_grid_rc_value(0, 1, 2)
-        grid.set_grid_rc_value(1, 0, 3)
-        grid.set_grid_rc_value(1, 1, 4)
+
+        for (r, c, v) in [
+                            (0, 0, 1),
+                            (0, 1, 2),
+                            (1, 0, 3),
+                            (1, 1, 4)
+        ]:
+            grid.set_grid_rc_value(r, c, v)
+
         box = grid.get_box_cells(0, 0)
         self.assertTrue(len(box) == 4)
+        self.assertTrue(sum(box) == 10)
 
 
 class TestPuzzle(unittest.TestCase):
@@ -164,22 +177,35 @@ class TestLoadAndParse(unittest.TestCase):
                 """)
 
     def test_load_candidates_some_values(self):
-        puzzle = Puzzle(2)
-        logging.getLogger().setLevel(logging.INFO)
+        puzzle1 = Puzzle(2)
+        puzzle2 = Puzzle(2)
+        #logging.getLogger().setLevel(logging.INFO)
         try:
-            puzzle.init_all_candidates()
-            logging.info("Before loading candidates:\n" + puzzle.to_string())
+            #puzzle.init_all_candidates()
+            logging.info("puzzle1:\n" + puzzle1.to_string())
+            logging.info("puzzle2:\n" + puzzle2.to_string())
             #import pdb; pdb.set_trace()
-            puzzle.load_candidates_from_string(
+            puzzle1.load_candidates_from_string(
                 """
-                    12 1 . .
-                    . . . .
+                    1       34  1234  1234   
+                    12    1234    3   1234   
 
-                    . . . .
-                    . . . .
+                    1234  1234  1234  123    
+                    1234    34  1234  1234   
 
                 """)
-            logging.info("After loading candidates:\n" + puzzle.to_string())
+            puzzle2.load_candidates_from_string(
+                """
+                    1       34     .     .   
+                    12       .    3      .   
+
+                       .     .     .  123    
+                       .    34     .     .   
+                """)
+            logging.info("puzzle1:\n" + puzzle1.to_string())
+            logging.info("puzzle2:\n" + puzzle2.to_string())
+            self.assertTrue(puzzle1.is_equal_to(puzzle2))
+            #logging.info("After loading candidates:\n" + puzzle.to_string())
 
         finally:
             # turn off info/debug
@@ -192,7 +218,7 @@ class TestSolvers(unittest.TestCase):
 
     def test_single_candidate(self):
         puzzle = Puzzle(2)
-        puzzle.init_all_candidates();
+        #puzzle.init_all_candidates();
         puzzle.load_from_string(
             """
             12 3.
@@ -212,7 +238,7 @@ class TestSolvers(unittest.TestCase):
 
     def test_single_position(self):
         puzzle = Puzzle(2)
-        puzzle.init_all_candidates();
+        #puzzle.init_all_candidates();
         puzzle.load_from_string(
             """
             1. ..
@@ -236,7 +262,7 @@ class TestSolvers(unittest.TestCase):
 
     def test_candidate_lines1(self):
         puzzle = Puzzle(3)
-        puzzle.init_all_candidates();
+        #puzzle.init_all_candidates();
         puzzle.load_from_string(
             """
             123 ... ...
@@ -278,7 +304,7 @@ class TestSolvers(unittest.TestCase):
     def test_candidate_lines2(self):
         puzzle = Puzzle(3)
         #import pdb; pdb.set_trace()
-        puzzle.init_all_candidates();
+        #puzzle.init_all_candidates();
         puzzle.add_CandidateLines()
         self.assertTrue(7 in puzzle.get_cell(2, 3).candidates)
         self.assertTrue(8 in puzzle.get_cell(2, 3).candidates)
@@ -307,5 +333,11 @@ class TestSolvers(unittest.TestCase):
         self.assertTrue(8 not in puzzle.get_cell(2, 6).candidates)
         self.assertTrue(9 not in puzzle.get_cell(2, 6).candidates)
 
+
+init_logging()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+# The End
+# vim:foldmethod=indent:foldnestmax=2

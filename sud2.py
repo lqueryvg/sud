@@ -89,7 +89,7 @@ class Cell():
             return str(self.value)
 
     def set_value(self, value):
-        logging.info("%s set_value(%s)", self.name, value)
+        logging.info("%s set_value(%s) called", self.name, value)
         #import pdb; pdb.set_trace()
         if self.value is not None:
             logging.info("%s set_value(%s) already set", self.name, value)
@@ -127,7 +127,7 @@ class Cell():
             lsnr.cell_candidate_removed_notification(self, value)
 
 
-class ConstraintGroup(object):
+class UniqueConstraint(object):
     def __init__(self, cells, puzzle=None, name=""):
         # Optionally point back to the puzzle
         self.puzzle = puzzle
@@ -330,6 +330,7 @@ class CandidateLines:
         del self.index[value]
 
         logging.info("  index =\n%s", pprint.pformat(self.index))
+
         #import pdb; pdb.set_trace()
         # Delete this cell from the index.
         for cand_value in self.index:
@@ -342,10 +343,10 @@ class CandidateLines:
                 self.check_line(cand_value, 'col', cell.col)
 
         logging.info(
-                    "in CandidateLines.cell_value_set_notification(),"
-                    "modified index =\n%s",
-                    pprint.pformat(self.index)
-                )
+            "in CandidateLines.cell_value_set_notification(),"
+            "modified index =\n%s",
+            pprint.pformat(self.index)
+        )
 
     def check_line(self, value, line_type, line_num):
         """
@@ -478,17 +479,17 @@ class Grid(object):
             for col in range(self.numcols):
                 my_cell = self.get_cell(row, col)
                 other_cell = other.get_cell(row, col)
-                if self.value != other.value or \
-                        self.candidates != other.candidates:
-                    return false
-        return true
+                if my_cell.value != other_cell.value or \
+                        my_cell.candidates != other_cell.candidates:
+                    return False
+        return True
 
 
-class Box(ConstraintGroup):
+class Box(UniqueConstraint):
     def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
         """
         TODO: I don't think it's good that Box inherits from
-        ConstraintGroup. I thikn this might trigger additional
+        UniqueConstraint. I think this might trigger additional
         cell change notifications.
 
         Row and col match the address of the top left cell in the box.
@@ -532,9 +533,7 @@ class Puzzle(Grid):
 #                    rownum, colnum, Cell(range(1, self.numrows + 1),
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
-        # TODO add constraint groups seperately to enable
-        # TODO techniques to be tested in isolation
-        self._add_constraint_groups()
+        self.init_all_candidates()
 
     def init_all_candidates(self):
         for rownum in range(self.numrows):
@@ -554,17 +553,19 @@ class Puzzle(Grid):
         #print "solution_steps " + string
         self.solution_steps.append(string)
 
-    def _add_constraint_groups(self):
+    def add_unique_constraints(self):
+
         self.cgrps = []     # all constraint groups
         self.box_cgrps = []     # just the boxes, for convenience
+
         for rownum in range(self.numrows):
             _row_cells = super(Puzzle, self).get_row_cells(rownum)
-            self.cgrps.append(ConstraintGroup(_row_cells,
+            self.cgrps.append(UniqueConstraint(_row_cells,
                 puzzle=self, name="Row"+str(rownum)))
 
         for colnum in range(self.numcols):
             _col_cells = super(Puzzle, self).get_col_cells(colnum)
-            self.cgrps.append(ConstraintGroup(
+            self.cgrps.append(UniqueConstraint(
                         _col_cells, puzzle=self, name="Col"+str(colnum)))
 
         for boxrow in range(0, self.numrows, self.box_width):
@@ -576,7 +577,7 @@ class Puzzle(Grid):
                 self.box_cgrps.append(box)
 
 #        for box in Grig.get_all_boxes():
-#            cgrp = ConstraintGroup(s, self, name="Box"+str(box.coord))
+#            cgrp = UniqueConstraint(s, self, name="Box"+str(box.coord))
 #            self.cgrps.append(cgrp)
 #            self.box_cgrps.append(cgrp)
 

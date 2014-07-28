@@ -1,6 +1,5 @@
 #!/usr/bin/env python2
 
-# import sud2
 from sud2 import *
 import unittest
 

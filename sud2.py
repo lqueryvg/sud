@@ -473,6 +473,16 @@ class Grid(object):
                 colnum = colnum + 1
         return s
 
+    def is_equal_to(self, other):
+        for row in range(self.numrows):
+            for col in range(self.numcols):
+                my_cell = self.get_cell(row, col)
+                other_cell = other.get_cell(row, col)
+                if self.value != other.value or \
+                        self.candidates != other.candidates:
+                    return false
+        return true
+
 
 class Box(ConstraintGroup):
     def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
@@ -690,7 +700,10 @@ class Puzzle(Grid):
                 else:
                     _word_candidates = list(_word)
                     if set(_word_candidates).issubset(_valid_candidate_values):
-                        cell.set_candidates(_word_candidates)
+                        if len(_word_candidates) == 1:
+                            cell.set_value(_word_candidates[0])
+                        else:
+                            cell.set_candidates(_word_candidates)
                     else:
                         import pdb; pdb.set_trace()
                         raise PuzzleParseError(

@@ -181,7 +181,6 @@ class TestLoadAndParse(unittest.TestCase):
         puzzle2 = Puzzle(2)
         #logging.getLogger().setLevel(logging.INFO)
         try:
-            #puzzle.init_all_candidates()
             logging.info("puzzle1:\n" + puzzle1.to_string())
             logging.info("puzzle2:\n" + puzzle2.to_string())
             #import pdb; pdb.set_trace()
@@ -217,28 +216,38 @@ class TestSolvers(unittest.TestCase):
         puzzle = Puzzle(2)
 
     def test_single_candidate(self):
+        #logging.getLogger().setLevel(logging.INFO)
         puzzle = Puzzle(2)
-        #puzzle.init_all_candidates();
-        puzzle.load_from_string(
-            """
-            12 3.
-            .. ..
 
-            .. ..
-            .. ..
-            """
-            )
-        self.assertTrue(puzzle.get_cell(0, 3).value == 4)
-        self.assertTrue(1 not in puzzle.get_cell(0, 3).candidates)
-        #print "\n" + puzzle.to_string()
-        #import pdb; pdb.set_trace()
-        #puzzle.get_cell(2, 2).set_value(1)
-        #print str.join("\n", puzzle.solution_steps)
-        #print puzzle.to_string()
+        try:
+            puzzle.add_unique_constraints()
+            puzzle.load_from_string(
+                """
+                12 3.
+                .. ..
+
+                .. ..
+                .. ..
+                """
+                )
+            expected = Puzzle(2)
+            expected.load_candidates_from_string(
+                """
+                    1         2     |    3         4     
+                    34        34    |    12        12    
+                #-------------------+--------------------
+                   234       134    |   124       123    
+                   234       134    |   124       123    
+                """
+                )
+            self.assertTrue(puzzle.get_cell(0, 3).value == '4')
+            self.assertTrue('1' not in puzzle.get_cell(0, 3).candidates)
+        finally:
+            logging.info("test_single_candidate() puzzle =\n" + puzzle.to_string())
+            logging.getLogger().setLevel(logging.CRITICAL)
 
     def test_single_position(self):
         puzzle = Puzzle(2)
-        #puzzle.init_all_candidates();
         puzzle.load_from_string(
             """
             1. ..
@@ -262,7 +271,6 @@ class TestSolvers(unittest.TestCase):
 
     def test_candidate_lines1(self):
         puzzle = Puzzle(3)
-        #puzzle.init_all_candidates();
         puzzle.load_from_string(
             """
             123 ... ...
@@ -304,7 +312,6 @@ class TestSolvers(unittest.TestCase):
     def test_candidate_lines2(self):
         puzzle = Puzzle(3)
         #import pdb; pdb.set_trace()
-        #puzzle.init_all_candidates();
         puzzle.add_CandidateLines()
         self.assertTrue(7 in puzzle.get_cell(2, 3).candidates)
         self.assertTrue(8 in puzzle.get_cell(2, 3).candidates)

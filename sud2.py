@@ -462,7 +462,10 @@ class Grid(object):
             if rownum > 0:
                 s = s + "\n"
                 if rownum % self.box_width == 0:
-                    s = s + '+'.join(["-"*10*self.box_width]*self.box_width) + "\n"
+                    t = '+'.join(["-"*10*self.box_width]*self.box_width) + "\n"
+                    l = list(t)
+                    l[0] = '#'
+                    s += ''.join(l)
             colnum = 0
             for cell in self.get_row_cells(rownum):
                 if colnum > 0 and colnum % self.box_width == 0:
@@ -669,7 +672,9 @@ class Puzzle(Grid):
             import re
 
             # support script style comments with '#'
-            re.sub(r"#.*$", '', _line)  # strip them
+            _line = re.sub(r'#.*$', '', _line)  # strip them
+            #import pdb; pdb.set_trace()
+            _line = re.sub(r'\|', '', _line)  # delete any decorative pipes
 
             _cell_words = _line.split()
             _num_cells = len(_cell_words)

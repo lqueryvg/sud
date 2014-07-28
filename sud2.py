@@ -49,11 +49,15 @@ class Cell():
         self.candidate_removed_listeners = []
 
     def set_candidates(self, candidate_values):
+        """
+        Bypasses all checks and propagation.
+        Intended only for use by load and initialisation routines.
+        """
         #if (self.value is not None or len(list(super(Cell, super(self))) != 0):
-        if (self.value is not None or len(self.candidates)):
-            import pdb; pdb.set_trace()
-            raise Exception("set_candidates() called when value or "
-                    "candidates already set")
+#       if (self.value is not None or len(self.candidates)):
+#           import pdb; pdb.set_trace()
+#           raise Exception("set_candidates() called when value or "
+#                   "candidates already set")
         #super(Cell, self).clear()
         #super(Cell, self).__init__(candidate_values)
         self.candidates.clear()
@@ -526,7 +530,7 @@ class Puzzle(Grid):
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
                 super(Puzzle, self).get_cell(rownum, colnum).set_candidates(
-                        range(1, self.numrows + 1)
+                        map(str, range(1, self.numrows + 1))
                 )
 
     def add_index():
@@ -629,7 +633,7 @@ class Puzzle(Grid):
                     if (_v != '.'):
                         cell = super(Puzzle, self).get_cell(_row, _col)
                         #import pdb; pdb.set_trace()
-                        cell.set_value(int(_v))
+                        cell.set_value(_v)
                     _col += + 1
 
             _row = _row + 1
@@ -649,6 +653,7 @@ class Puzzle(Grid):
         (e.g. 1-9) is ignored.
         """
         _row = 0
+        _valid_candidate_values = set(map(str, range(1, self.numrows + 1)))
         for _line in iterable:
             import re
 
@@ -677,13 +682,23 @@ class Puzzle(Grid):
 
             _col = 0
             #import pdb; pdb.set_trace()
-            _valid_candidate_values = set(range(1, self.numrows + 1))
             for _word in _cell_words:
                 cell = super(Puzzle, self).get_cell(_row, _col)
-                _word_candidates = list(_word)
-                # ignore invalid candidate values
-                if set(_word_candidates).issubset(_valid_candidate_values):
-                    cell.set_candidates(_word_candidates)
+                if _word == '.':
+                    pass
+                    # ignore
+                else:
+                    _word_candidates = list(_word)
+                    if set(_word_candidates).issubset(_valid_candidate_values):
+                        cell.set_candidates(_word_candidates)
+                    else:
+                        import pdb; pdb.set_trace()
+                        raise PuzzleParseError(
+                                'Row {}: invalid candidate(s) found in word;'
+                                'word is \"{}\".\nline is \"{}\"'.format(
+                                    _row, _word, _line
+                                )
+                        )
                 _col += + 1
 
             _row = _row + 1

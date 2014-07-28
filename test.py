@@ -117,26 +117,9 @@ class TestPuzzle(unittest.TestCase):
     def test_puzzle_create(self):
         puzzle = Puzzle(2)
 
-    def test_load_candidates(self):
-        puzzle = Puzzle(2)
-        self.assertRaisesRegexp(PuzzleParseError,
-                'unexpected number of words',
-                puzzle.load_candidates_from_string, ('wibble')
-                )
-        self.assertRaisesRegexp(PuzzleParseError,
-                'too many rows',
-                puzzle.load_candidates_from_string,
-                """
-                    . . . .
-                    . . . .
 
-                    . . . .
-                    . . . .
-
-                    . . . .
-                """)
-
-    def test_puzzle_parse_errors(self):
+class TestLoadAndParse(unittest.TestCase):
+    def test_load_errors(self):
         puzzle = Puzzle(2)
         self.assertRaisesRegexp(PuzzleParseError,
                 'unexpected number of words',
@@ -158,6 +141,55 @@ class TestPuzzle(unittest.TestCase):
 
                     .. ..
                 """)
+
+    def test_load_candidates_unexpected_number_of_words(self):
+        puzzle = Puzzle(2)
+        self.assertRaisesRegexp(PuzzleParseError,
+                'unexpected number of words',
+                puzzle.load_candidates_from_string, ('wibble')
+                )
+
+    def test_load_candidates_too_many_rows(self):
+        puzzle = Puzzle(2)
+        self.assertRaisesRegexp(PuzzleParseError,
+                'too many rows',
+                puzzle.load_candidates_from_string,
+                """
+                    . . . .
+                    . . . .
+
+                    . . . .
+                    . . . .
+
+                    . . . .
+                """)
+
+    def test_load_candidates_some_values(self):
+        puzzle = Puzzle(2)
+        logging.getLogger().setLevel(logging.INFO)
+        try:
+            puzzle.init_all_candidates()
+            logging.info("Before loading candidates:\n" + puzzle.to_string())
+            #import pdb; pdb.set_trace()
+            puzzle.load_candidates_from_string(
+                """
+                    12 1 . .
+                    . . . .
+
+                    . . . .
+                    . . . .
+
+                """)
+            logging.info("After loading candidates:\n" + puzzle.to_string())
+
+        finally:
+            # turn off info/debug
+            logging.getLogger().setLevel(logging.CRITICAL)
+
+
+class TestSolvers(unittest.TestCase):
+    def test_puzzle_create(self):
+        puzzle = Puzzle(2)
 
     def test_single_candidate(self):
         puzzle = Puzzle(2)

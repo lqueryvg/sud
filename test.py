@@ -64,10 +64,10 @@ class TestCell(unittest.TestCase):
     def test_remove_candidate(self):
         # Check inheritance works
         obj = Cell([1, 3, 2])
-        obj.candidates.remove_candidate(2)
-        self.assertFalse(2 in obj.candidates)
-        self.assertTrue(1 in obj.candidates)
-        self.assertTrue(3 in obj.candidates)
+        obj.candidate_set.remove_candidate(2)
+        self.assertFalse(2 in obj.candidate_set)
+        self.assertTrue(1 in obj.candidate_set)
+        self.assertTrue(3 in obj.candidate_set)
 
 
 class TestUniqueConstraints(unittest.TestCase):

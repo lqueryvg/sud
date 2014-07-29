@@ -17,8 +17,6 @@ class CandidateSet(set):
     """
 
     def __init__(self, candidate_values):
-        #if len(candidate_values) < 2:
-        #    raise AssertionError("At least two candidates required")
         super(CandidateSet, self).__init__(candidate_values)
 
     def remove_candidate(self, value):
@@ -26,7 +24,6 @@ class CandidateSet(set):
         if len(self) == 1:
             raise AssertionError("Attempt to remove final candidate")
         super(CandidateSet, self).remove(value)
-        #self.remove(value)
 
         if len(self) == 1:
             raise SingleCandidate
@@ -34,12 +31,11 @@ class CandidateSet(set):
 
 class Cell():
     def __init__(self, candidate_values, row=-1, col=-1):
-        #super(Cell, self).__init__(candidate_values)
         self.value = None
         self.name = "Cell{}{}".format(row, col)
         self.row = row
         self.col = col
-        self.candidates = CandidateSet(candidate_values)
+        self.candidate_set = CandidateSet(candidate_values)
         self.cell_value_set_listeners = []
         self.candidate_removed_listeners = []
 
@@ -48,8 +44,8 @@ class Cell():
         Bypasses all checks and propagation.
         Intended mainly for testing.
         """
-        self.candidates.clear()
-        self.candidates = CandidateSet(candidate_values)
+        self.candidate_set.clear()
+        self.candidate_set = CandidateSet(candidate_values)
 
     def add_cell_value_set_listener(self, lsnr):
         self.cell_value_set_listeners.append(lsnr)
@@ -67,7 +63,6 @@ class Cell():
         return self.value
 
     def __repr__(self):
-        #return self.name + "(" + "".join(str(x) for x in sorted(self)) + ")"
         return self.name
 
     def __str__(self):
@@ -84,12 +79,12 @@ class Cell():
             return
 
         #if value not in self:
-        if value not in self.candidates:
+        if value not in self.candidate_set:
             raise AssertionError("Value is not a candidate")
 
         self.value = value
 
-        self.candidates.clear()    # remove all candidates
+        self.candidate_set.clear()    # remove all candidates
         for lsnr in self.cell_value_set_listeners:
             logging.info(
             "{} set_value({}) calling listener {}".format(
@@ -97,16 +92,15 @@ class Cell():
             )
             lsnr.cell_value_set_notification(self, value)
 
-        # delete all listeners, since there can be no further changes
-        # to this cell
+        # delete all listeners, since there can
+        # be no further changes to this cell
         del self.cell_value_set_listeners[:]
         del self.candidate_removed_listeners[:]
 
     def remove_candidate(self, value):
         logging.debug("Cell remove_candidate() %s from %s",
                 value, self.name)
-        #super(Cell, self).remove_candidate(value)
-        self.candidates.remove_candidate(value)
+        self.candidate_set.remove_candidate(value)
         for lsnr in self.candidate_removed_listeners:
             logging.debug(
             "{} remove_candidate({}) calling listener {}".format(
@@ -134,7 +128,7 @@ class UniqueConstraint(object):
             # group has already deleted the candidate value
             # from this cell, so only remove candidate if
             # already there, otherwise we'll get a key error.
-            if value in cell.candidates:
+            if value in cell.candidate_set:
                 if self.puzzle is not None:
                     self.puzzle.log_solution_step(
                             "RemoveCandidate {} from {} {}".format(
@@ -143,7 +137,7 @@ class UniqueConstraint(object):
                     cell.remove_candidate(value)
                 except SingleCandidate:
                     # list(my_set)[0] grabs any value from a set
-                    cell.set_value(list(cell.candidates)[0])
+                    cell.set_value(list(cell.candidate_set)[0])
                     if self.puzzle is not None:
                         self.puzzle.log_solution_step(
                                 "SingleCandidate {} value is {}".format(
@@ -175,7 +169,7 @@ class SinglePosition:
                 raise AssertionError("Unexpected value in cgrp cell;"
                         " only cells without a value should be in a cgrp.")
             #for candidate_value in cell:
-            for candidate_value in cell.candidates:
+            for candidate_value in cell.candidate_set:
                 if candidate_value in self.possible_values:
                     self.possible_values.get(candidate_value).add(cell)
                 else:
@@ -253,11 +247,11 @@ class CandidateLines:
             logging.info(
                     "in CandidateLines.__init__(), cell = %s[%s]",
                     repr(cell),
-                    "".join(str(x) for x in sorted(cell.candidates))
+                    "".join(str(x) for x in sorted(cell.candidate_set))
             )
 
             #import pdb; pdb.set_trace()
-            for cand in cell.candidates:
+            for cand in cell.candidate_set:
                 if cand not in self.index:
                     self.index[cand] = dict(row=dict(), col=dict())
 
@@ -295,7 +289,7 @@ class CandidateLines:
                     #import pdb; pdb.set_trace()
                     linenum, line = self.index[cand][line_type].popitem()
                     for cell in line['peers']:
-                        if cand in cell.candidates:
+                        if cand in cell.candidate_set:
                             cell.remove_candidate(cand)
                     del self.index[cand][line_type]
 
@@ -352,7 +346,7 @@ class CandidateLines:
                 logging.info("    removing peers")
                 #import pdb; pdb.set_trace()
                 for peer_cell in line['peers']:
-                    if value in peer_cell.candidates:
+                    if value in peer_cell.candidate_set:
                         peer_cell.remove_candidate(value)
                 del self.index[value][line_type]
 
@@ -451,7 +445,7 @@ class Grid(object):
                 if colnum > 0 and colnum % self.box_width == 0:
                     s = s + "|"
                 if cell.value is None:
-                    s = s + ''.join(str(x) for x in sorted(cell.candidates)).center(10, " ")
+                    s = s + ''.join(str(x) for x in sorted(cell.candidate_set)).center(10, " ")
                 else:
                     s = s + str(cell.value).center(10, " ")
                 colnum = colnum + 1
@@ -463,7 +457,7 @@ class Grid(object):
                 my_cell = self.get_cell(row, col)
                 other_cell = other.get_cell(row, col)
                 if my_cell.value != other_cell.value or \
-                        my_cell.candidates != other_cell.candidates:
+                        my_cell.candidate_set != other_cell.candidate_set:
                     return False
         return True
 

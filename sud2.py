@@ -33,11 +33,6 @@ class CandidateSet(set):
 
 
 class Cell():
-    """
-    TODO CandidateSet should maybe be a member rather than a superclass.  I'm
-    not sure it seems natural for candidates to be "in" a cell.
-    """
-
     def __init__(self, candidate_values, row=-1, col=-1):
         #super(Cell, self).__init__(candidate_values)
         self.value = None
@@ -161,21 +156,26 @@ class UniqueConstraint(object):
                                 "SingleCandidate {} value is {}".format(
                                     cell.name, cell.value))
 
+    def __repr__(self):
+        return self.name
+
 class SinglePosition:
     """
     Detects when a value has been eliminated from the candidates of all except
     one cell in a constraint group.
     """
     def __init__(self, cgrp, puzzle=None):
-        # Create a dictionary of possible cells
-        # for each possible value in a constraint group.
-        # I.e. a dictionary of lists of cells indexed by candidate values.
+        """
+        Create a dictionary of possible cells
+        for each possible value in a constraint group.
+        I.e. a dictionary of lists of cells indexed by candidate values.
+        """
     
         #import pdb; pdb.set_trace()
         self.puzzle = puzzle
         self.possible_values = {}
         self.cgrp = cgrp
-        self.name = cgrp.name
+        self.name = cgrp.name + ".SinglePosition"
         for cell in cgrp.cells:
             if cell.value is not None:
                 #import pdb; pdb.set_trace()
@@ -198,6 +198,9 @@ class SinglePosition:
             possible_cells = self.possible_values[value]
             if len(possible_cells) == 1:
                 self._found_value(iter(possible_cells).next(), value)
+
+    def __repr__(self):
+        return self.name
 
     def _found_value(self, cell, value):
         # we have found the last possible cell for this value
@@ -277,7 +280,7 @@ class CandidateLines:
                 if cell.col not in self.index[cand]['col']:
                     self.index[cand]['col'][cell.col] = {
                         'cells': set(),
-                        'peers': self.box_cgrp.get_peers_in_row(cell.col)
+                        'peers': self.box_cgrp.get_peers_in_col(cell.col)
                         }
                 col = self.index[cand]['col'][cell.col]
                 col['cells'].add(cell)
@@ -533,7 +536,6 @@ class Puzzle(Grid):
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
                 super(Puzzle, self).set_grid_rc_value(
-#                    rownum, colnum, Cell(range(1, self.numrows + 1),
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         self.init_all_candidates()
@@ -549,7 +551,6 @@ class Puzzle(Grid):
         """
         TODO Generic method to add a solving technique.
         """
-
         raise AssertionError("Not implemented yet")
 
     def log_solution_step(self, string):

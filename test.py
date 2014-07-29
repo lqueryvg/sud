@@ -240,34 +240,60 @@ class TestSolvers(unittest.TestCase):
                    234       134    |   124       123    
                 """
                 )
-            self.assertTrue(puzzle.get_cell(0, 3).value == '4')
-            self.assertTrue('1' not in puzzle.get_cell(0, 3).candidates)
+            #self.assertTrue(puzzle.get_cell(0, 3).value == '4')
+            #self.assertTrue('1' not in puzzle.get_cell(0, 3).candidates)
+            self.assertTrue(puzzle.is_equal_to(expected))
         finally:
             logging.info("test_single_candidate() puzzle =\n" + puzzle.to_string())
             logging.getLogger().setLevel(logging.CRITICAL)
 
     def test_single_position(self):
         puzzle = Puzzle(2)
-        puzzle.load_from_string(
-            """
-            1. ..
-            .. ..
+        #logging.getLogger().setLevel(logging.INFO)
 
-            .. 1.
-            .. ..
-            """
-            )
-        #print "\n" + puzzle.to_string()
-        #import pdb; pdb.set_trace()
-        self.assertTrue(puzzle.get_cell(1, 3).value is None)
-        self.assertTrue(puzzle.get_cell(3, 1).value is None)
+        try:
+            puzzle.add_unique_constraints()
+            puzzle.load_from_string(
+                """
+                1. ..
+                .. ..
 
-        puzzle.add_SinglePosition()
+                .. 1.
+                .. ..
+                """
+                )
+            #print "\n" + puzzle.to_string()
+            #import pdb; pdb.set_trace()
+            self.assertTrue(puzzle.get_cell(1, 3).value is None)
+            self.assertTrue(puzzle.get_cell(3, 1).value is None)
+            logging.info("test_single_position() before adding SinglePosition,"
+                    " puzzle =\n" + puzzle.to_string())
+            logging.info("create/load expected puzzle")
 
-        self.assertTrue(puzzle.get_cell(1, 3).value == 1)
-        self.assertTrue(puzzle.get_cell(3, 1).value == 1)
-        #print "\n" + puzzle.to_string()
-        #print str.join("\n", puzzle.solution_steps)
+            puzzle.add_SinglePosition()
+            logging.info("puzzle = \n" + puzzle.to_string())
+
+            expected = Puzzle(2)
+            expected.load_candidates_from_string(
+                """
+                    1        234    |   234       234
+                   234       234    |   234       1
+                #-------------------+--------------------
+                   234       234    |    1        234
+                   234       1      |   234       234
+                """
+                )
+            logging.info("expected puzzle = \n" + expected.to_string())
+
+            self.assertTrue(puzzle.is_equal_to(expected))
+
+            #import pdb; pdb.set_trace()
+            self.assertTrue(puzzle.get_cell(1, 3).value == '1')
+            self.assertTrue(puzzle.get_cell(3, 1).value == '1')
+            logging.info("test_single_position() puzzle =\n" +
+                    puzzle.to_string())
+        finally:
+            logging.getLogger().setLevel(logging.CRITICAL)
 
     def test_candidate_lines1(self):
         puzzle = Puzzle(3)

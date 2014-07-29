@@ -270,7 +270,8 @@ class TestSolvers(unittest.TestCase):
                     " puzzle =\n" + puzzle.to_string())
             logging.info("create/load expected puzzle")
 
-            puzzle.add_SinglePosition()
+            #puzzle.add_SinglePosition()
+            SinglePosition.add_to_puzzle(puzzle)
             logging.info("puzzle after adding SinglePosition = \n"
                     + puzzle.to_string())
 

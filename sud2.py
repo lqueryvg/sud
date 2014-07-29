@@ -148,9 +148,20 @@ class UniqueConstraint(object):
 
 class SinglePosition:
     """
-    Detects when a value has been eliminated from the candidates of all except
-    one cell in a constraint group.
+    Detects when a value has been eliminated from the candidates of all but
+    one cell in a cell group; then the cell value is known.
     """
+    @staticmethod
+    def add_to_puzzle(puzzle=None):
+        """
+        Note: not an instance method.
+        Creates lots of 
+        """
+        assert(puzzle is not None);
+
+        for cgrp in puzzle.cgrps:
+            dummy = SinglePosition(cgrp, puzzle=puzzle)
+
     def __init__(self, cgrp, puzzle=None):
         """
         Create a dictionary of possible cells
@@ -517,9 +528,11 @@ class Puzzle(Grid):
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         self.init_all_candidates()
+        # TODO get callers to access cell_groups instead of cgrps
         self.cgrps = []     # all constraint groups
         self.box_cgrps = []     # just the boxes, for convenience
         self.boxes = []
+        self.cell_groups = []
         self.init_groups()
 
     def init_all_candidates(self):
@@ -533,7 +546,6 @@ class Puzzle(Grid):
         self.solution_steps.append(string)
 
     def init_groups(self):
-        self.cell_groups = []
         for rownum in range(self.numrows):
             _row_cells = super(Puzzle, self).get_row_cells(rownum)
             self.cell_groups.append(CellGroup(_row_cells,
@@ -564,10 +576,7 @@ class Puzzle(Grid):
                 #import pdb; pdb.set_trace()
                 self.box_cgrps.append(uc)
 
-    def add_SinglePosition(self):
-        for cgrp in self.cgrps:
-            dummy = SinglePosition(cgrp, puzzle=self)
-
+    # TODO move out
     def add_CandidateLines(self):
         logging.info("add_CandidateLines() called")
         self.candidate_lines = []

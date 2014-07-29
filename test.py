@@ -79,7 +79,9 @@ class TestUniqueConstraints(unittest.TestCase):
         #import pdb; pdb.set_trace()
         cell00 = Cell([1, 2], row=0, col=0)
         cell01 = Cell([1, 2], row=0, col=1)
-        grp = UniqueConstraint([cell00, cell01])
+        dummy = UniqueConstraint(
+                CellGroup([cell00, cell01])
+        )
         cell00.set_value(1)
         self.assertTrue(cell01.get_value() == 2)
 
@@ -127,7 +129,7 @@ class TestGrid(unittest.TestCase):
 
 class TestPuzzle(unittest.TestCase):
     def test_puzzle_create(self):
-        puzzle = Puzzle(2)
+        dummy = Puzzle(2)
 
 
 class TestLoadAndParse(unittest.TestCase):
@@ -212,8 +214,6 @@ class TestLoadAndParse(unittest.TestCase):
 
 
 class TestSolvers(unittest.TestCase):
-    def test_puzzle_create(self):
-        puzzle = Puzzle(2)
 
     def test_single_candidate(self):
         #logging.getLogger().setLevel(logging.INFO)
@@ -271,7 +271,8 @@ class TestSolvers(unittest.TestCase):
             logging.info("create/load expected puzzle")
 
             puzzle.add_SinglePosition()
-            logging.info("puzzle = \n" + puzzle.to_string())
+            logging.info("puzzle after adding SinglePosition = \n"
+                    + puzzle.to_string())
 
             expected = Puzzle(2)
             expected.load_candidates_from_string(
@@ -295,77 +296,161 @@ class TestSolvers(unittest.TestCase):
         finally:
             logging.getLogger().setLevel(logging.CRITICAL)
 
+    def test_candidate_lines0(self):
+        puzzle = Puzzle(2)
+        #logging.getLogger().setLevel(logging.INFO)
+        try:
+            puzzle.load_candidates_from_string(
+                """
+                    1      2    1234  1234   
+                      34    34  1234  1234   
+
+                    1234  1234  1234  1234   
+                    1234  1234  1234  1234   
+                """
+                )
+            logging.info("before adding CandidateLines puzzle = \n"
+                    + puzzle.to_string())
+            puzzle.add_CandidateLines()
+            logging.info("After adding CandidateLines puzzle = \n"
+                    + puzzle.to_string())
+            expected = Puzzle(2)
+            expected.load_candidates_from_string(
+                """
+                    1      2    1234  1234   
+                      34    34  12    12     
+
+                    1234  1234  1234  1234   
+                    1234  1234  1234  1234   
+                """
+                )
+            self.assertTrue(puzzle.is_equal_to(expected))
+        finally:
+            logging.getLogger().setLevel(logging.CRITICAL)
+
     def test_candidate_lines1(self):
         puzzle = Puzzle(3)
-        puzzle.load_from_string(
-            """
-            123 ... ...
-            456 ... ...
-            ... ... ...
-
-            ... ... ...
-            ... ... ...
-            ... ... ...
-
-            ... ... ...
-            ... ... ...
-            ... ... ...
-            """
-            )
-        self.assertTrue(7 in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(8 in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(9 in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(7 in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(8 in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(9 in puzzle.get_cell(2, 6).candidates)
         #logging.getLogger().setLevel(logging.INFO)
-        logging.info("Before puzzle.add_CandidateLines:\n" + puzzle.to_string())
-        puzzle.add_CandidateLines()
-        logging.info("After puzzle.add_CandidateLines:\n" + puzzle.to_string())
-        #import pdb; pdb.set_trace()
-        #logging.getLogger().setLevel(logging.CRITICAL)
-        self.assertTrue(7 in puzzle.get_cell(2, 0).candidates)
-        self.assertTrue(7 in puzzle.get_cell(2, 1).candidates)
-        self.assertTrue(7 in puzzle.get_cell(2, 2).candidates)
-        self.assertTrue(7 in puzzle.get_cell(0, 3).candidates)
-        self.assertTrue(7 not in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(8 not in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(9 not in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(7 not in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(8 not in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(9 not in puzzle.get_cell(2, 6).candidates)
+
+        try:
+            puzzle.add_unique_constraints()
+            puzzle.load_from_string(
+                """
+                123 ... ...
+                456 ... ...
+                ... ... ...
+
+                ... ... ...
+                ... ... ...
+                ... ... ...
+
+                ... ... ...
+                ... ... ...
+                ... ... ...
+                """
+                )
+            self.assertTrue('7' in puzzle.get_cell(2, 3).candidates)
+            self.assertTrue('8' in puzzle.get_cell(2, 3).candidates)
+            self.assertTrue('9' in puzzle.get_cell(2, 3).candidates)
+            self.assertTrue('7' in puzzle.get_cell(2, 6).candidates)
+            self.assertTrue('8' in puzzle.get_cell(2, 6).candidates)
+            self.assertTrue('9' in puzzle.get_cell(2, 6).candidates)
+
+            logging.info("Before puzzle.add_CandidateLines:\n" + puzzle.to_string())
+
+            expected = Puzzle(3)
+            expected.load_candidates_from_string(
+                """
+                    1         2         3    |  456789    456789    456789  |  456789    456789    456789
+                    4         5         6    |  123789    123789    123789  |  123789    123789    123789
+                   789       789       789   |123456789 123456789 123456789 |123456789 123456789 123456789
+                #----------------------------+------------------------------+------------------------------
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                #----------------------------+------------------------------+------------------------------
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                """
+            )
+            self.assertTrue(puzzle.is_equal_to(expected))
+
+            puzzle.add_CandidateLines()
+
+            logging.info("After puzzle.add_CandidateLines:\n" + puzzle.to_string())
+            expected.load_candidates_from_string(
+                """
+                    1         2         3    |  456789    456789    456789  |  456789    456789    456789
+                    4         5         6    |  123789    123789    123789  |  123789    123789    123789
+                   789       789       789   |123456    123456    123456    |123456    123456    123456   
+                #----------------------------+------------------------------+------------------------------
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                #----------------------------+------------------------------+------------------------------
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
+                """
+            )
+            self.assertTrue(puzzle.is_equal_to(expected))
+
+            #import pdb; pdb.set_trace()
+            self.assertTrue('7' in puzzle.get_cell(2, 0).candidates)
+            self.assertTrue('7' in puzzle.get_cell(2, 1).candidates)
+            self.assertTrue('7' in puzzle.get_cell(2, 2).candidates)
+            self.assertTrue('7' in puzzle.get_cell(0, 3).candidates)
+            self.assertTrue('7' not in puzzle.get_cell(2, 3).candidates)
+            self.assertTrue('8' not in puzzle.get_cell(2, 3).candidates)
+            self.assertTrue('9' not in puzzle.get_cell(2, 3).candidates)
+            self.assertTrue('7' not in puzzle.get_cell(2, 6).candidates)
+            self.assertTrue('8' not in puzzle.get_cell(2, 6).candidates)
+            self.assertTrue('9' not in puzzle.get_cell(2, 6).candidates)
+        finally:
+            logging.getLogger().setLevel(logging.CRITICAL)
 
     def test_candidate_lines2(self):
-        puzzle = Puzzle(3)
-        #import pdb; pdb.set_trace()
-        puzzle.add_CandidateLines()
-        self.assertTrue(7 in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(8 in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(9 in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(7 in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(8 in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(9 in puzzle.get_cell(2, 6).candidates)
         #logging.getLogger().setLevel(logging.INFO)
-        logging.info("Before set_value(0,0,1):\n" + puzzle.to_string())
-        puzzle.get_cell(0, 0).set_value(1)
-        logging.info("After set_value(0,0,1):\n" + puzzle.to_string())
-        puzzle.get_cell(0, 1).set_value(2)
-        logging.info("After set_value(0,1,2):\n" + puzzle.to_string())
-        puzzle.get_cell(0, 2).set_value(3)
-        puzzle.get_cell(1, 0).set_value(4)
-        puzzle.get_cell(1, 1).set_value(5)
-        logging.info("After set_value(1,1,5):\n" + puzzle.to_string())
-        puzzle.get_cell(1, 2).set_value(6)
-        logging.info("After set_value calls:\n" + puzzle.to_string())
-        logging.getLogger().setLevel(logging.CRITICAL)
-        #print str.join("\n", puzzle.solution_steps)
-        self.assertTrue(7 not in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(8 not in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(9 not in puzzle.get_cell(2, 3).candidates)
-        self.assertTrue(7 not in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(8 not in puzzle.get_cell(2, 6).candidates)
-        self.assertTrue(9 not in puzzle.get_cell(2, 6).candidates)
 
+        try:
+            puzzle = Puzzle(3)
+            #import pdb; pdb.set_trace()
+            puzzle.add_CandidateLines()
+            #logging.getLogger().setLevel(logging.INFO)
+            logging.info("Before set_value(0,0,1):\n" + puzzle.to_string())
+            puzzle.get_cell(0, 0).set_value('1')
+            logging.info("After set_value(0,0,1):\n" + puzzle.to_string())
+            puzzle.get_cell(0, 1).set_value('2')
+            logging.info("After set_value(0,1,2):\n" + puzzle.to_string())
+            puzzle.get_cell(0, 2).set_value('3')
+            puzzle.get_cell(1, 0).set_value('4')
+            puzzle.get_cell(1, 1).set_value('5')
+            logging.info("After set_value(1,1,5):\n" + puzzle.to_string())
+            puzzle.get_cell(1, 2).set_value('6')
+            logging.info("After set_value calls:\n" + puzzle.to_string())
+            logging.getLogger().setLevel(logging.CRITICAL)
+            #print str.join("\n", puzzle.solution_steps)
+            expected = Puzzle(3)
+            expected.load_candidates_from_string(
+                """
+                    1         2         3     |123456789 123456789 123456789 |123456789 123456789 123456789
+                    4         5         6     |123456789 123456789 123456789 |123456789 123456789 123456789
+                123456789 123456789 123456789 |  123456    123456    123456  |  123456    123456    123456
+                #-----------------------------+------------------------------+------------------------------
+                123456789 123456789 123456789 |123456789 123456789 123456789 |123456789 123456789 123456789
+                123456789 123456789 123456789 |123456789 123456789 123456789 |123456789 123456789 123456789
+                123456789 123456789 123456789 |123456789 123456789 123456789 |123456789 123456789 123456789
+                #-----------------------------+------------------------------+------------------------------
+                123456789 123456789 123456789 |123456789 123456789 123456789 |123456789 123456789 123456789
+                123456789 123456789 123456789 |123456789 123456789 123456789 |123456789 123456789 123456789
+                123456789 123456789 123456789 |123456789 123456789 123456789 |123456789 123456789 123456789
+                """
+            )
+            self.assertTrue(puzzle.is_equal_to(expected))
+
+        finally:
+            logging.getLogger().setLevel(logging.CRITICAL)
 
 init_logging()
 

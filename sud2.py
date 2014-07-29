@@ -123,20 +123,20 @@ class Cell():
 
 
 class UniqueConstraint(object):
-    def __init__(self, cells, puzzle=None, name=""):
+    def __init__(self, cell_group, puzzle=None, name=""):
         # Optionally point back to the puzzle
         self.puzzle = puzzle
         self.name = name
 
-        self.cells = cells
+        self.cell_group = cell_group
 
         # listen to cells for value set
-        for cell in cells:
+        for cell in cell_group.cells:
             cell.add_cell_value_set_listener(self)
 
     def cell_value_set_notification(self, changed_cell, value):
-        self.cells.remove(changed_cell)
-        for cell in self.cells:
+        self.cell_group.cells.remove(changed_cell)
+        for cell in self.cell_group.cells:
             # It's possible that an over-lapping contstraint
             # group has already deleted the candidate value
             # from this cell, so only remove candidate if
@@ -176,7 +176,7 @@ class SinglePosition:
         self.possible_values = {}
         self.cgrp = cgrp
         self.name = cgrp.name + ".SinglePosition"
-        for cell in cgrp.cells:
+        for cell in cgrp.cell_group.cells:
             if cell.value is not None:
                 #import pdb; pdb.set_trace()
                 raise AssertionError("Unexpected value in cgrp cell;"
@@ -189,7 +189,7 @@ class SinglePosition:
                     self.possible_values[candidate_value] = set([cell])
 
         
-        for cell in cgrp.cells:
+        for cell in cgrp.cell_group.cells:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
@@ -237,9 +237,9 @@ class CandidateLines:
     """
 
     def __repr__(self):
-        return "CandidateLines" + self.name
+        return "CandidateLines." + self.name
 
-    def __init__(self, box_cgrp, puzzle=None):
+    def __init__(self, box_cell_group, puzzle=None):
 
         assert(puzzle is not None)
         
@@ -252,17 +252,17 @@ class CandidateLines:
         
         self.puzzle = puzzle
         self.index = {}
-        self.box_cgrp = box_cgrp
-        self.name = box_cgrp.name
+        self.box_cell_group = box_cell_group
+        self.name = box_cell_group.name
         logging.info("in CandidateLines.__init__(), self.name = %s", self.name)
 
-        for cell in box_cgrp.cells:
+        for cell in box_cell_group.cells:
             logging.info("in CandidateLines.__init__(), cell = %s[%s]",
                     repr(cell), "".join(str(x) for x in sorted(cell.candidates))
                     )
-            if cell.value is not None:
-                raise AssertionError("Unexpected value in cgrp cell;"
-                        " only cells without a value should be in a cgrp.")
+            #if cell.value is not None:
+                #raise AssertionError("Unexpected value in cell group cell;"
+                        #" only cells without a value should be in a cell group.")
 
             #import pdb; pdb.set_trace()
             for cand in cell.candidates:
@@ -272,7 +272,7 @@ class CandidateLines:
                 if cell.row not in self.index[cand]['row']:
                     self.index[cand]['row'][cell.row] = {
                         'cells': set(),
-                        'peers': self.box_cgrp.get_peers_in_row(cell.row)
+                        'peers': box_cell_group.get_peers_in_row(cell.row)
                         }
                 row = self.index[cand]['row'][cell.row]
                 row['cells'].add(cell)
@@ -280,7 +280,7 @@ class CandidateLines:
                 if cell.col not in self.index[cand]['col']:
                     self.index[cand]['col'][cell.col] = {
                         'cells': set(),
-                        'peers': self.box_cgrp.get_peers_in_col(cell.col)
+                        'peers': box_cell_group.get_peers_in_col(cell.col)
                         }
                 col = self.index[cand]['col'][cell.col]
                 col['cells'].add(cell)
@@ -491,7 +491,17 @@ class Grid(object):
         return True
 
 
-class Box(UniqueConstraint):
+class CellGroup(object):
+    def __init__(self, cells=[], name="CellGroup"):
+        self.name = name
+        self.cells = cells
+
+    def __repr__(self):
+        return self.name
+
+
+#class Box(UniqueConstraint):
+class Box(CellGroup):
     def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
         """
         TODO: I don't think it's good that Box inherits from
@@ -502,9 +512,12 @@ class Box(UniqueConstraint):
         The box name encodes the same.
         """
         assert(puzzle is not None)
-        super(Box, self).__init__(cells, puzzle,
+        super(Box, self).__init__(cells=cells, 
                 name = "Box" + str(boxrow) + str(boxcol)
                 )
+        #self.cells = cells
+        self.puzzle = puzzle
+        self.name ="Box" + str(boxrow) + str(boxcol)
         self.boxrow = boxrow
         self.boxcol = boxcol
 
@@ -539,6 +552,10 @@ class Puzzle(Grid):
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         self.init_all_candidates()
+        self.cgrps = []     # all constraint groups
+        self.box_cgrps = []     # just the boxes, for convenience
+        self.boxes = []
+        self.init_groups()
 
     def init_all_candidates(self):
         for rownum in range(self.numrows):
@@ -557,34 +574,38 @@ class Puzzle(Grid):
         #print "solution_steps " + string
         self.solution_steps.append(string)
 
-    def add_unique_constraints(self):
-
-        self.cgrps = []     # all constraint groups
-        self.box_cgrps = []     # just the boxes, for convenience
-
+    def init_groups(self):
+        self.cell_groups = []
+        #self.boxes = []
         for rownum in range(self.numrows):
             _row_cells = super(Puzzle, self).get_row_cells(rownum)
-            self.cgrps.append(UniqueConstraint(_row_cells,
-                puzzle=self, name="Row"+str(rownum)))
+            self.cell_groups.append(CellGroup(_row_cells,
+                name="Row"+str(rownum)))
 
         for colnum in range(self.numcols):
             _col_cells = super(Puzzle, self).get_col_cells(colnum)
-            self.cgrps.append(UniqueConstraint(
-                        _col_cells, puzzle=self, name="Col"+str(colnum)))
+            self.cell_groups.append(CellGroup(
+                        _col_cells, name="Col"+str(colnum)))
 
         for boxrow in range(0, self.numrows, self.box_width):
             for boxcol in range(0, self.numcols, self.box_width):
                 _box_cells = super(Puzzle, self).get_box_cells(boxrow, boxcol)
                 box = Box(_box_cells, puzzle=self,
                         boxrow=boxrow, boxcol=boxcol)
-                self.cgrps.append(box)
-                self.box_cgrps.append(box)
+                self.cell_groups.append(box)
+                self.boxes.append(box)
 
-#        for box in Grig.get_all_boxes():
-#            cgrp = UniqueConstraint(s, self, name="Box"+str(box.coord))
-#            self.cgrps.append(cgrp)
-#            self.box_cgrps.append(cgrp)
-
+    def add_unique_constraints(self):
+        for cell_group in self.cell_groups:
+            uc = UniqueConstraint(
+                cell_group,
+                puzzle=self,
+                name = cell_group.name + '.UniqueConstraint'
+            )
+            self.cgrps.append(uc)
+            if isinstance(cell_group, Box):
+                #import pdb; pdb.set_trace()
+                self.box_cgrps.append(uc)
 
     def add_SinglePosition(self):
         for cgrp in self.cgrps:
@@ -593,8 +614,9 @@ class Puzzle(Grid):
     def add_CandidateLines(self):
         logging.info("add_CandidateLines() called")
         self.candidate_lines = []
-        for box_cgrp in self.box_cgrps:
-            cl = CandidateLines(box_cgrp, puzzle=self)
+        #for box_cgrp in self.box_cgrps:
+        for box_group in self.boxes:
+            cl = CandidateLines(box_group, puzzle=self)
             self.candidate_lines.append(cl)
 
     def load_from_iterable(self, iterable):

@@ -46,15 +46,8 @@ class Cell():
     def set_candidates(self, candidate_values):
         """
         Bypasses all checks and propagation.
-        Intended only for use by load and initialisation routines.
+        Intended mainly for testing.
         """
-        #if (self.value is not None or len(list(super(Cell, super(self))) != 0):
-#       if (self.value is not None or len(self.candidates)):
-#           import pdb; pdb.set_trace()
-#           raise Exception("set_candidates() called when value or "
-#                   "candidates already set")
-        #super(Cell, self).clear()
-        #super(Cell, self).__init__(candidate_values)
         self.candidates.clear()
         self.candidates = CandidateSet(candidate_values)
 
@@ -227,23 +220,23 @@ class SinglePosition:
 
 class CandidateLines:
     """
-    Detects when the only candidates for a value in a box lie on a line (i.e.
-    a row or column within that box) and if so eliminates the value from
+    If the only candidates for a value in a box lie on a line (i.e.
+    a row or column) within that box, eliminates the value from
     candidates of cells in other boxes on the same line.
-
-    For every value not yet known in the box, index the list of rows and cols
-    the value can be on.  For each of those rows/cols, store the list of cells
-    within the box the value can be in.
     """
 
     def __repr__(self):
         return "CandidateLines." + self.name
 
     def __init__(self, box_cell_group, puzzle=None):
-
+        """
+        For every value not yet known in the box, index the list of rows and
+        cols the value can be on.  For each of those rows/cols, store the list
+        of cells within the box the value can be in.
+        """
         assert(puzzle is not None)
         
-        # Structure of the internal index looks like this.
+        # Internal index looks like this.
         #
         # index[value]['row'][rownum]['cells'] = set of cells
         # index[value]['row'][rownum]['peers'] = set of cells
@@ -257,12 +250,11 @@ class CandidateLines:
         logging.info("in CandidateLines.__init__(), self.name = %s", self.name)
 
         for cell in box_cell_group.cells:
-            logging.info("in CandidateLines.__init__(), cell = %s[%s]",
-                    repr(cell), "".join(str(x) for x in sorted(cell.candidates))
-                    )
-            #if cell.value is not None:
-                #raise AssertionError("Unexpected value in cell group cell;"
-                        #" only cells without a value should be in a cell group.")
+            logging.info(
+                    "in CandidateLines.__init__(), cell = %s[%s]",
+                    repr(cell),
+                    "".join(str(x) for x in sorted(cell.candidates))
+            )
 
             #import pdb; pdb.set_trace()
             for cand in cell.candidates:
@@ -285,26 +277,20 @@ class CandidateLines:
                 col = self.index[cand]['col'][cell.col]
                 col['cells'].add(cell)
 
-            #print self.name + " adding candidate lines listeners to " + repr(cell)
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
         logging.debug(
-                    "in CandidateLines.__init__(), index =\n%s",
-                    pprint.pformat(self.index)
-                )
-        #import pprint
-        #    print "Before check, Box is " + self.name
-        #    pprint.pprint(self.index)
+            "in CandidateLines.__init__(), index =\n%s",
+            pprint.pformat(self.index)
+        )
 
-        # If any values have only 1 possible row or col within the box, we can
-        # eliminate the value from other boxes in the same row or col.
+        # If any values have only 1 possible row or col within the box,
+        # eliminate them from other boxes in the same row or col.
         #import pdb; pdb.set_trace()
         for cand in list(self.index):
+            # use list() here because we might del items as we go
             for line_type in list(self.index[cand]):
-                # use list() because we might del items as we go
-                #for linenum in list(self.index[cand][line_type]):
-                #    self.check_line(self.index[cand][line_type], linenum, cand)
                 if len(self.index[cand][line_type]) == 1:
                     #import pdb; pdb.set_trace()
                     linenum, line = self.index[cand][line_type].popitem()
@@ -312,11 +298,6 @@ class CandidateLines:
                         if cand in cell.candidates:
                             cell.remove_candidate(cand)
                     del self.index[cand][line_type]
-
-        #if self.name == "Box00":
-        #    import pprint
-        #    print "After check, Box is " + self.name
-        #    pprint.pprint(self.index)
 
     def cell_value_set_notification(self, cell, value):
         """
@@ -380,10 +361,6 @@ class CandidateLines:
         Remove the changed cell from the set of cells on the same
         row and column for the candiate value that has been removed.
         """
-        #if self.name == "Box00":
-        #    import pprint
-        #    print "in cand remove, Box is " + self.name
-        #    pprint.pprint(self.index)
 
         logging.info("CandidateLines.cell_candidate_removed_notification()")
         logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
@@ -500,22 +477,16 @@ class CellGroup(object):
         return self.name
 
 
-#class Box(UniqueConstraint):
 class Box(CellGroup):
     def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
         """
-        TODO: I don't think it's good that Box inherits from
-        UniqueConstraint. I think this might trigger additional
-        cell change notifications.
-
-        Row and col match the address of the top left cell in the box.
-        The box name encodes the same.
+        boxrow and boxcol address the top left cell in the box.
+        The box name will encode the same.
         """
         assert(puzzle is not None)
         super(Box, self).__init__(cells=cells, 
                 name = "Box" + str(boxrow) + str(boxcol)
                 )
-        #self.cells = cells
         self.puzzle = puzzle
         self.name ="Box" + str(boxrow) + str(boxcol)
         self.boxrow = boxrow
@@ -564,19 +535,11 @@ class Puzzle(Grid):
                         map(str, range(1, self.numrows + 1))
                 )
 
-    def add_index():
-        """
-        TODO Generic method to add a solving technique.
-        """
-        raise AssertionError("Not implemented yet")
-
     def log_solution_step(self, string):
-        #print "solution_steps " + string
         self.solution_steps.append(string)
 
     def init_groups(self):
         self.cell_groups = []
-        #self.boxes = []
         for rownum in range(self.numrows):
             _row_cells = super(Puzzle, self).get_row_cells(rownum)
             self.cell_groups.append(CellGroup(_row_cells,

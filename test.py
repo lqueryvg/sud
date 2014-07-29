@@ -349,12 +349,6 @@ class TestSolvers(unittest.TestCase):
                 ... ... ...
                 """
                 )
-            self.assertTrue('7' in puzzle.get_cell(2, 3).candidates)
-            self.assertTrue('8' in puzzle.get_cell(2, 3).candidates)
-            self.assertTrue('9' in puzzle.get_cell(2, 3).candidates)
-            self.assertTrue('7' in puzzle.get_cell(2, 6).candidates)
-            self.assertTrue('8' in puzzle.get_cell(2, 6).candidates)
-            self.assertTrue('9' in puzzle.get_cell(2, 6).candidates)
 
             logging.info("Before puzzle.add_CandidateLines:\n" + puzzle.to_string())
 
@@ -394,19 +388,9 @@ class TestSolvers(unittest.TestCase):
                 2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
                 """
             )
+            #import pdb; pdb.set_trace()
             self.assertTrue(puzzle.is_equal_to(expected))
 
-            #import pdb; pdb.set_trace()
-            self.assertTrue('7' in puzzle.get_cell(2, 0).candidates)
-            self.assertTrue('7' in puzzle.get_cell(2, 1).candidates)
-            self.assertTrue('7' in puzzle.get_cell(2, 2).candidates)
-            self.assertTrue('7' in puzzle.get_cell(0, 3).candidates)
-            self.assertTrue('7' not in puzzle.get_cell(2, 3).candidates)
-            self.assertTrue('8' not in puzzle.get_cell(2, 3).candidates)
-            self.assertTrue('9' not in puzzle.get_cell(2, 3).candidates)
-            self.assertTrue('7' not in puzzle.get_cell(2, 6).candidates)
-            self.assertTrue('8' not in puzzle.get_cell(2, 6).candidates)
-            self.assertTrue('9' not in puzzle.get_cell(2, 6).candidates)
         finally:
             logging.getLogger().setLevel(logging.CRITICAL)
 

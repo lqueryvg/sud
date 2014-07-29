@@ -16,15 +16,15 @@ Terminology
 
 Cells, Rows, Columns, Boxes
 
-    Each puzzle cell contains a value from 1 to 9.
-    Cells are arranged in a grid of 9 rows and 9 columns.
-    The grid is divided into nine non-overlapping 3x3 boxes.
+    Each puzzle cell contains a value from 1 to 9.  Cells are arranged in a
+    grid of 9 rows and 9 columns.  The grid is divided into nine
+    non-overlapping 3x3 boxes.
     
     Note: Different sized grids (4x4, 9x9, 16x16, etc) are only partially
-    supported; specifically the cells values when reading from a string
-    or file must be 1 character, but internally the values in each
-    cell are expected to be 1 up to the box width squared.
-    This obviously wouldn't work for 16x16 grids.
+    supported; specifically the cells values when reading from a string or file
+    must be 1 character, but internally the values in each cell are expected to
+    be 1 up to the box width squared.  This obviously wouldn't work for 16x16
+    grids.
 
 Candidates
 
@@ -32,17 +32,22 @@ Candidates
     not yet known. When the puzzle is empty, the candidates for every cell
     will be the set of numbers from 1 to 9 inclusive.
 
-Constraint Group
+CellGroup
 
-    A grouping of 9 cells in a row, column or box.  The cells in any constraint
-    group must contain the numbers 1 to 9 without repeats.
+    A grouping of 9 cells in a row, column or box.  The Cell Group is given a
+    name, eg. 'Row0', 'Col3' or 'Box03'.  For boxes, the name includes the row
+    and col number of the top-left cell in the box.
 
-    Every cell can be a member of more than one constraint group; in fact
-    every cell is a member of 3 constraint groups: a row, a column
+    Every cell is a member of exactly 3 cell groups: a row, a column
     and a box.
 
-    When a cell value is known, the value can be removed from the candidates of
-    all other cells in the cell's 3 constraint groups.
+UniqueConstraint
+
+    UniqueConstraint ensures that there are no repeated values within a cell
+    group.
+
+    When a cell value becomes known, the value is removed from the
+    candidates of all other cells in the cell's 3 constraint groups.
 
 Listeners
 
@@ -77,25 +82,6 @@ Listeners
         = 20 calls.  It is therefore expected that a class interested in cell
         candidates removals also listens for cell values being set.
 
-Indexes (Idea)
-
-    Indexes are like constraint groups in that they store data about
-    candidates, with a view to detecting conditions for different solving
-    strategies.
-
-    For example, to detect Single Position, we could create an index on a
-    constraint group which, for each value not yet found, lists the cells the
-    value could occur in. Then, as soon as the length of any of those lists is
-    reduced to 1, there can only be one cell which can contain that value, so
-    the position of the value becomes known.
-
-    Therefore the index would need to be notified whenever a cell value is
-    set or a cell candidate is removed.
-
-    (Perhaps an Index *is* a more general form of a constraint group?  I.e.
-    perhaps a constraint group should be generalised into a single candidate
-    index?)
-
 
 Solving Techniques
 ------------------
@@ -121,20 +107,19 @@ Single Candidate
 Medium Techniques
 =================
 
-Candidate Lines (TODO)
+Candidate Lines
 
-    The only candidates for a value in a box lie on a line (i.e. row or
-    column), so the same value in other boxes on the same line can be
-    eliminated.
+    If the only candidates for a value in a box lie on a line (i.e.
+    a row or column) within that box, eliminates the value from
+    candidates of cells in other boxes on the same line.
 
-    Creating an index for each box listing the
-    possible rows & columns for each value in that box.
+    This is done by maintaining an index as follows:
 
-    rows{value} -> [ rownum1, rownum2, ...]
-    cols{value} -> [ colnum1, colnum2, ...]
-    
+    For every value not yet known in the box, index the list of rows and
+    cols the value can be on.  For each of those rows/cols, store the list
+    of cells within the box the value can be in.
+
     When a value has only
     one possible row/column remaining, it gets deleted from the candidate lists
     of cells in other boxes in the same row/column, and the row/column index
     for that value can be deleted (since it's served its purpose).
-

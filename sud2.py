@@ -109,7 +109,21 @@ class Cell():
             lsnr.cell_candidate_removed_notification(self, value)
 
 
-class UniqueConstraint(object):
+class UniqueConstraints(object):
+
+    @staticmethod
+    def add_to_puzzle(puzzle=None):
+
+        assert(puzzle is not None)
+
+        for cell_group in puzzle.cell_groups:
+            # TODO worry about GC
+            dummy = UniqueConstraints(
+                cell_group,
+                puzzle=puzzle,
+                name = cell_group.name + '.UniqueConstraints'
+            )
+
     def __init__(self, cell_group, puzzle=None, name=""):
         # Optionally point back to the puzzle
         self.puzzle = puzzle
@@ -159,10 +173,11 @@ class SinglePosition:
         """
         assert(puzzle is not None);
 
-        for cgrp in puzzle.cgrps:
-            dummy = SinglePosition(cgrp, puzzle=puzzle)
+        for cell_group in puzzle.cell_groups:
+            # TODO wonder about GC
+            dummy = SinglePosition(cell_group, puzzle=puzzle)
 
-    def __init__(self, cgrp, puzzle=None):
+    def __init__(self, cell_group, puzzle=None):
         """
         Create a dictionary of possible cells
         for each possible value in a constraint group.
@@ -172,13 +187,15 @@ class SinglePosition:
         #import pdb; pdb.set_trace()
         self.puzzle = puzzle
         self.possible_values = {}
-        self.cgrp = cgrp
-        self.name = cgrp.name + ".SinglePosition"
-        for cell in cgrp.cell_group.cells:
+        self.cell_group = cell_group
+        self.name = cell_group.name + ".SinglePosition"
+        for cell in cell_group.cells:
             if cell.value is not None:
                 #import pdb; pdb.set_trace()
-                raise AssertionError("Unexpected value in cgrp cell;"
-                        " only cells without a value should be in a cgrp.")
+                raise AssertionError(
+                    "Unexpected value in cell_group cell;"
+                    " only cells without a value should be in a cell_group."
+                )
             #for candidate_value in cell:
             for candidate_value in cell.candidate_set:
                 if candidate_value in self.possible_values:
@@ -187,7 +204,7 @@ class SinglePosition:
                     self.possible_values[candidate_value] = set([cell])
 
         
-        for cell in cgrp.cell_group.cells:
+        for cell in cell_group.cells:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
@@ -205,7 +222,7 @@ class SinglePosition:
         if self.puzzle is not None:
             self.puzzle.log_solution_step(
                 "SinglePosition for {} in {} {}".format(
-                value, self.cgrp.name, cell.name))
+                value, self.cell_group.name, cell.name))
         cell.set_value(value)
 
     def cell_value_set_notification(self, changed_cell, value):
@@ -229,6 +246,15 @@ class CandidateLines:
     a row or column) within that box, eliminates the value from
     candidates of cells in other boxes on the same line.
     """
+    
+    @staticmethod
+    def add_to_puzzle(puzzle=None):
+
+        logging.info("CandidateLines.add_to_puzzle() called")
+        assert(puzzle is not None)
+        for box_group in puzzle.boxes:
+            # TODO wonder about GC
+            dummy = CandidateLines(box_group, puzzle=puzzle)
 
     def __repr__(self):
         return "CandidateLines." + self.name
@@ -456,7 +482,9 @@ class Grid(object):
                 if colnum > 0 and colnum % self.box_width == 0:
                     s = s + "|"
                 if cell.value is None:
-                    s = s + ''.join(str(x) for x in sorted(cell.candidate_set)).center(10, " ")
+                    s = s + ''.join(str(x) for x in sorted(
+                        cell.candidate_set)
+                    ).center(10, " ")
                 else:
                     s = s + str(cell.value).center(10, " ")
                 colnum = colnum + 1
@@ -528,11 +556,8 @@ class Puzzle(Grid):
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         self.init_all_candidates()
-        # TODO get callers to access cell_groups instead of cgrps
-        self.cgrps = []     # all constraint groups
-        self.box_cgrps = []     # just the boxes, for convenience
-        self.boxes = []
-        self.cell_groups = []
+        self.cell_groups = []   # all cell groups
+        self.boxes = []         # just the boxes, for convenience
         self.init_groups()
 
     def init_all_candidates(self):
@@ -564,27 +589,6 @@ class Puzzle(Grid):
                 self.cell_groups.append(box)
                 self.boxes.append(box)
 
-    def add_unique_constraints(self):
-        for cell_group in self.cell_groups:
-            uc = UniqueConstraint(
-                cell_group,
-                puzzle=self,
-                name = cell_group.name + '.UniqueConstraint'
-            )
-            self.cgrps.append(uc)
-            if isinstance(cell_group, Box):
-                #import pdb; pdb.set_trace()
-                self.box_cgrps.append(uc)
-
-    # TODO move out
-    def add_CandidateLines(self):
-        logging.info("add_CandidateLines() called")
-        self.candidate_lines = []
-        #for box_cgrp in self.box_cgrps:
-        for box_group in self.boxes:
-            cl = CandidateLines(box_group, puzzle=self)
-            self.candidate_lines.append(cl)
-
     def load_from_iterable(self, iterable):
         """
         Each line is split into words.
@@ -614,8 +618,8 @@ class Puzzle(Grid):
             if _num_box_words != self.box_width:
                 #import pdb; pdb.set_trace()
                 raise PuzzleParseError(
-                    ('Row {}: unexpected number of words; expect {} words (one per box); '
-                    + 'found {}.').format(
+                        ('Row {}: unexpected number of words; expect {} words '
+                        '(one per box); found {}.').format(
                         _row, self.box_width, _num_box_words
                 ))
 

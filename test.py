@@ -79,7 +79,7 @@ class TestUniqueConstraints(unittest.TestCase):
         #import pdb; pdb.set_trace()
         cell00 = Cell([1, 2], row=0, col=0)
         cell01 = Cell([1, 2], row=0, col=1)
-        dummy = UniqueConstraint(
+        dummy = UniqueConstraints(
                 CellGroup([cell00, cell01])
         )
         cell00.set_value(1)
@@ -220,7 +220,8 @@ class TestSolvers(unittest.TestCase):
         puzzle = Puzzle(2)
 
         try:
-            puzzle.add_unique_constraints()
+            #puzzle.add_unique_constraints()
+            UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """
                 12 3.
@@ -252,7 +253,8 @@ class TestSolvers(unittest.TestCase):
         #logging.getLogger().setLevel(logging.INFO)
 
         try:
-            puzzle.add_unique_constraints()
+            #puzzle.add_unique_constraints()
+            UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """
                 1. ..
@@ -312,7 +314,8 @@ class TestSolvers(unittest.TestCase):
                 )
             logging.info("before adding CandidateLines puzzle = \n"
                     + puzzle.to_string())
-            puzzle.add_CandidateLines()
+            #puzzle.add_CandidateLines()
+            CandidateLines.add_to_puzzle(puzzle)
             logging.info("After adding CandidateLines puzzle = \n"
                     + puzzle.to_string())
             expected = Puzzle(2)
@@ -334,7 +337,8 @@ class TestSolvers(unittest.TestCase):
         #logging.getLogger().setLevel(logging.INFO)
 
         try:
-            puzzle.add_unique_constraints()
+            #puzzle.add_unique_constraints()
+            UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """
                 123 ... ...
@@ -371,7 +375,8 @@ class TestSolvers(unittest.TestCase):
             )
             self.assertTrue(puzzle.is_equal_to(expected))
 
-            puzzle.add_CandidateLines()
+            #puzzle.add_CandidateLines()
+            CandidateLines.add_to_puzzle(puzzle)
 
             logging.info("After puzzle.add_CandidateLines:\n" + puzzle.to_string())
             expected.load_candidates_from_string(
@@ -401,7 +406,8 @@ class TestSolvers(unittest.TestCase):
         try:
             puzzle = Puzzle(3)
             #import pdb; pdb.set_trace()
-            puzzle.add_CandidateLines()
+            #puzzle.add_CandidateLines()
+            CandidateLines.add_to_puzzle(puzzle)
             #logging.getLogger().setLevel(logging.INFO)
             logging.info("Before set_value(0,0,1):\n" + puzzle.to_string())
             puzzle.get_cell(0, 0).set_value('1')

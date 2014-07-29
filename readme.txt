@@ -51,42 +51,41 @@ UniqueConstraint
 
 Listeners
 
-    When a cell is changed the cell can tell other objects about the change.
-    Objects register themselves with cells to say that they are interested.
+    When a cell is changed the cell can notify other objects.  Objects must
+    register themselves with cells to say that they are interested.
     
-    Each cell has 2 lists of listeners waiting for notifications, one
+    Each cell has 2 lists of listeners waiting for notifications, one list
     for each of the following types of event:
 
-    1. Cell candidate removed.
+    1. CandidateRemoved
 
         The SingleCandidate class (and others) will need to listen for this.
-        If a cell's the penultimate candidate is removed, SingleCandidate will
+        If a cell's penultimate candidate is removed, SingleCandidate will
         need to set the cell's value to the only remaining candidate.
 
-    2. Cell value set.
+    2. ValueSet
 
-        A ConstraintGroup will need to listen for cell values being set so it
-        can remove the value from the candidates of all other cells in the
-        group.
+        Once a cell value has been set, the ValueSet listeners are first
+        notified. Then all listeners and candidates are removed from the
+        cell.
 
-        Once a cell value has been set, the value set listeners are first
-        notified then all listeners and the candidates list are removed
-        (cleared) from the cell (since there can be no further changes to this
-        cell).
+        NOTE that CandidateRemoved listeners are *NOT* notified when the
+        candidate list is cleared in this situation, since it would generate a
+        lot of unecessary calls.  For example, if there are 4 candidates and 5
+        listeners, there would be 4 x 5 = 20 calls.
+        
+        Therefore an object interested in CandidateRemoved events should also
+        listen for ValueSet events.
 
-        Note that candidate removed listeners are *not* called when the
-        candidate list is cleared in this situation, because (for example) if
-        there are 4 candidates and 5 candidate remove listeners, we would have
-        to call each listener once for each candidate being removed, i.e. 4 x 5
-        = 20 calls.  It is therefore expected that a class interested in cell
-        candidates removals also listens for cell values being set.
+        Conversly, it is conceivable that an object interested in 
+        ValueSet events might *NOT* care about CandidateRemoved events.
 
 
 Solving Techniques
 ------------------
 
-Rather than re-invent the wheel, I'll use the same names for
-the various solving techniques as can be found here:
+Rather than re-invent the wheel, I'll use the same names for the various
+solving techniques as found here:
 
 http://www.sudokuoftheday.com/techniques
 
@@ -114,11 +113,11 @@ Candidate Lines
 
     This is done by maintaining an index as follows:
 
-    For every value not yet known in the box, index the list of rows and
-    cols the value can be on.  For each of those rows/cols, store the list
-    of cells within the box the value can be in.
+        For every value not yet known in the box, index the list of rows and
+        cols the value can be on.  For each of those rows/cols, store the list
+        of cells within the box the value can be in.
 
-    When a value has only
-    one possible row/column remaining, it gets deleted from the candidate lists
-    of cells in other boxes in the same row/column, and the row/column index
-    for that value can be deleted (since it's served its purpose).
+    When a value has only one possible row/column remaining, it gets deleted
+    from the candidate lists of cells in other boxes in the same row/column,
+    and the row/column index for that value can be deleted (since it's served
+    its purpose).

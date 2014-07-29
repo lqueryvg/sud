@@ -51,13 +51,12 @@ UniqueConstraint
 
 Listeners
 
-    When a cell is changed the cell can notify other objects of the change.
+    When a cell is changed the cell can tell other objects about the change.
     Objects register themselves with cells to say that they are interested.
     
-    Each cell has 2 lists of listeners waiting for notifications.
-    Each list is for listeners interested in a specific type of
-    cell change. The 2 types are:
-    
+    Each cell has 2 lists of listeners waiting for notifications, one
+    for each of the following types of event:
+
     1. Cell candidate removed.
 
         The SingleCandidate class (and others) will need to listen for this.

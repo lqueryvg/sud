@@ -75,7 +75,7 @@ class TestUniqueConstraints(unittest.TestCase):
         #logging.getLogger().setLevel(logging.DEBUG)
         pass
 
-    def test_unique_constraint(self):
+    def test_unique_constraint_finds_single_candidate(self):
         #import pdb; pdb.set_trace()
         cell00 = Cell([1, 2], row=0, col=0)
         cell01 = Cell([1, 2], row=0, col=1)
@@ -84,6 +84,27 @@ class TestUniqueConstraints(unittest.TestCase):
         )
         cell00.set_value(1)
         self.assertTrue(cell01.get_value() == 2)
+
+    def test_unique_constraint_violations(self):
+        cell00 = Cell([1, 2, 3], row=0, col=0)
+        cell01 = Cell([1, 2, 3], row=0, col=1)
+        cell02 = Cell([1, 2, 3], row=0, col=2)
+        cell00.set_value(1)
+        cell01.set_value(1)
+        cell02.set_value(1)
+        #import pdb; pdb.set_trace()
+        self.assertRaisesRegexp(
+            Exception,
+            'UniqueConstraints broken',
+            UniqueConstraints,
+            CellGroup([cell00, cell01, cell02])
+        )
+        # now check exception args are what we expect
+        try:
+            dummy = UniqueConstraints(CellGroup([cell00, cell01, cell02]))
+        except Exception as e:
+            self.assertTrue(e.args[1][0] == [1, cell01, cell00])
+            self.assertTrue(e.args[1][1] == [1, cell02, cell00])
 
     def tearDown(self):
         logging.getLogger().setLevel(logging.CRITICAL)
@@ -250,6 +271,7 @@ class TestSolvers(unittest.TestCase):
         #logging.getLogger().setLevel(logging.INFO)
 
         try:
+            #import pdb; pdb.set_trace()
             UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """
@@ -261,7 +283,6 @@ class TestSolvers(unittest.TestCase):
                 """
                 )
             #print "\n" + puzzle.to_string()
-            #import pdb; pdb.set_trace()
             self.assertTrue(puzzle.get_cell(1, 3).value is None)
             self.assertTrue(puzzle.get_cell(3, 1).value is None)
             logging.info("test_single_position() before adding SinglePosition,"
@@ -401,10 +422,7 @@ class TestSolvers(unittest.TestCase):
 
         try:
             puzzle = Puzzle(3)
-            #import pdb; pdb.set_trace()
-            #puzzle.add_CandidateLines()
             CandidateLines.add_to_puzzle(puzzle)
-            #logging.getLogger().setLevel(logging.INFO)
             logging.info("Before set_value(0,0,1):\n" + puzzle.to_string())
             puzzle.get_cell(0, 0).set_value('1')
             logging.info("After set_value(0,0,1):\n" + puzzle.to_string())
@@ -417,7 +435,6 @@ class TestSolvers(unittest.TestCase):
             puzzle.get_cell(1, 2).set_value('6')
             logging.info("After set_value calls:\n" + puzzle.to_string())
             logging.getLogger().setLevel(logging.CRITICAL)
-            #print str.join("\n", puzzle.solution_steps)
             expected = Puzzle(3)
             expected.load_candidates_from_string(
                 """

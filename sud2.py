@@ -42,7 +42,7 @@ class Cell():
     def set_candidates(self, candidate_values):
         """
         Bypasses all checks and propagation.
-        Intended mainly for testing.
+        Intended for testing.
         """
         self.candidate_set.clear()
         self.candidate_set = CandidateSet(candidate_values)
@@ -90,7 +90,7 @@ class Cell():
             "{} set_value({}) calling listener {}".format(
                     self.name, value, repr(lsnr))
             )
-            lsnr.cell_value_set_notification(self, value)
+            lsnr.on_value_set(self, value)
 
         # delete all listeners, since there can
         # be no further changes to this cell
@@ -106,10 +106,27 @@ class Cell():
             "{} remove_candidate({}) calling listener {}".format(
                     self.name, value, repr(lsnr))
             )
-            lsnr.cell_candidate_removed_notification(self, value)
+            lsnr.on_candidate_removed(self, value)
+
+
+class CellGroup(object):
+    """
+    Just a grouping of cells with an optional name.
+    """
+    def __init__(self, cells=[], name="CellGroup"):
+        self.name = name
+        self.cells = cells
+
+    def __repr__(self):
+        return self.name
 
 
 class UniqueConstraints(object):
+    """
+    Ensures that values are not repeated for cells in a group.
+    If the group already contains repeats, then an Exception
+    is raised with a list of violations.
+    """
 
     @staticmethod
     def add_to_puzzle(puzzle=None):
@@ -124,21 +141,38 @@ class UniqueConstraints(object):
                 name = cell_group.name + '.UniqueConstraints'
             )
 
-    def __init__(self, cell_group, puzzle=None, name=""):
+    def __init__(self, cell_group, puzzle=None, name=None):
         # Optionally point back to the puzzle
         self.puzzle = puzzle
-        self.name = name
+        if name is None:
+            self.name = cell_group.name + '.UniqueConstraints'
+        else:
+            self.name = name
 
         self.cells = list(cell_group.cells)      # store a copy
+
+        # Check for violations.
+        # A list of violations will be raised in a single exception.
+        cell_for_value = dict()
+        violations = []
+        for cell in self.cells:
+            value = cell.value
+            if value is not None:
+                if value in cell_for_value:
+                    # Violation found.
+                    other_cell = cell_for_value[value]
+                    violations.append([value, cell, other_cell])
+                else:
+                    cell_for_value[value] = cell
+
+        if len(violations) > 0:
+            raise Exception(self.name + " broken", violations)
 
         # listen to cells for value set
         for cell in self.cells:
             cell.add_cell_value_set_listener(self)
 
-        # TODO check current status of puzzle for violations
-        # All violations will be raised an a single exception.
-
-    def cell_value_set_notification(self, cell, value):
+    def on_value_set(self, cell, value):
         self.cells.remove(cell)
         for neighbor in self.cells:
             # It's possible that an over-lapping contstraint
@@ -223,11 +257,11 @@ class SinglePosition:
                 value, self.name, cell.name))
         cell.set_value(value)
 
-    def cell_value_set_notification(self, changed_cell, value):
+    def on_value_set(self, changed_cell, value):
         # no need to watch the value any more
         del self.possible_values[value]
 
-    def cell_candidate_removed_notification(self, cell, value):
+    def on_candidate_removed(self, cell, value):
         # delete cell from set of possibilities for that value
         if value not in self.possible_values:
             return
@@ -265,12 +299,29 @@ class CandidateLines:
         """
         assert(puzzle is not None)
         
-        # Internal index looks like this.
+        # Internal index is a nested dict and looks like this.
         #
-        # index[value]['row'][rownum]['cells'] = set of cells
-        # index[value]['row'][rownum]['peers'] = set of cells
-        # index[value]['col'][colnum]['cells'] = set of cells
-        # index[value]['col'][colnum]['peers'] = set of cells
+        # index[cand]['row'][rownum]['cells'] = set of cells
+        # index[cand]['row'][rownum]['peers'] = set of cells
+        # index[cand]['col'][colnum]['cells'] = set of cells
+        # index[cand]['col'][colnum]['peers'] = set of cells
+        #
+        # For example, to show that the candidate value 1
+        # can be on row 0 in cells (0,0), (0,1) and (0,2)
+        # the data structure might look like this (only
+        # the top row is depicted).
+
+        # +--+    +---+     +-+                             
+        # |1 |--> |row|---> |0|---> (Cell00, Cell01, Cell02)
+        # +--+    +---+     +-+                             
+        # |2 |    |col|     |1|                             
+        # +--+    +---+     +-+                             
+        # |3 |              |2|                             
+        # +--+              +-+                             
+        # |. |                                              
+        # |. |                                              
+        # +--+                                              
+
         
         self.puzzle = puzzle
         self.index = {}
@@ -288,16 +339,17 @@ class CandidateLines:
             #import pdb; pdb.set_trace()
             for cand in cell.candidate_set:
                 if cand not in self.index:
+                    # Create empty row and col dicts.
                     self.index[cand] = dict(row=dict(), col=dict())
 
                 def store_peers(line_num, line_type, get_peers_fn):
-                    if line_num not in self.index[cand][line_type]:
-                        self.index[cand][line_type][line_num] = {
+                    lines = self.index[cand][line_type]
+                    if line_num not in lines:
+                        lines[line_num] = {
                             'cells': set(),
                             'peers': get_peers_fn(line_num)
                             }
-                    line = self.index[cand][line_type][line_num]
-                    line['cells'].add(cell)
+                    lines[line_num]['cells'].add(cell)
 
                 store_peers(cell.row, 'row', box_cell_group.get_peers_in_row)
                 store_peers(cell.col, 'col', box_cell_group.get_peers_in_col)
@@ -324,7 +376,7 @@ class CandidateLines:
                             cell.remove_candidate(cand)
                     del self.index[cand][line_type]
 
-    def cell_value_set_notification(self, cell, value):
+    def on_value_set(self, cell, value):
         """
         Once the position of a value is known, delete
         it from the index, and also delete the cell from the lists
@@ -333,7 +385,7 @@ class CandidateLines:
         see if a CandidateLine condition has been found.
         """
 
-        logging.info("CandidateLines.cell_value_set_notification()")
+        logging.info("CandidateLines.on_value_set()")
         logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
 
         del self.index[value]
@@ -344,15 +396,16 @@ class CandidateLines:
         # Delete this cell from the index.
         for cand_value in self.index:
             def del_from_index(line_type, line_num):
-                if cell in self.index[cand_value][line_type][line_num]['cells']:
-                    self.index[cand_value][line_type][line_num]['cells'].remove(cell)
+                lines = self.index[cand_value][line_type]
+                if cell in lines[line_num]['cells']:
+                    lines[line_num]['cells'].remove(cell)
                     self.check_line(cand_value, line_type, line_num)
             del_from_index('row', cell.row)
             del_from_index('col', cell.col)
 
 
         logging.info(
-            "in CandidateLines.cell_value_set_notification(),"
+            "in CandidateLines.on_value_set(),"
             "modified index =\n%s",
             pprint.pformat(self.index)
         )
@@ -381,13 +434,13 @@ class CandidateLines:
                         peer_cell.remove_candidate(value)
                 del self.index[value][line_type]
 
-    def cell_candidate_removed_notification(self, cell, value):
+    def on_candidate_removed(self, cell, value):
         """
         Remove the changed cell from the set of cells on the same
         row and column for the candiate value that has been removed.
         """
 
-        logging.info("CandidateLines.cell_candidate_removed_notification()")
+        logging.info("CandidateLines.on_candidate_removed()")
         logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
 
         if value in self.index:
@@ -494,34 +547,30 @@ class Grid(object):
         return True
 
 
-class CellGroup(object):
-    def __init__(self, cells=[], name="CellGroup"):
-        self.name = name
-        self.cells = cells
-
-    def __repr__(self):
-        return self.name
-
-
 class Box(CellGroup):
+    """
+    Remembers the row and column of the top left cell
+    in the box and adds utility functions to get
+    the 'peer' cells of a row or column.
+    'Peers' are cells in the specified line but outside
+    of this box.
+    """
     def __init__(self, cells, puzzle=None, boxrow=0, boxcol=0):
         """
         boxrow and boxcol address the top left cell in the box.
         The box name will encode the same.
         """
         assert(puzzle is not None)
-        super(Box, self).__init__(cells=cells, 
-                name = "Box" + str(boxrow) + str(boxcol)
-                )
+        super(Box, self).__init__(
+            cells=cells, 
+            name = "Box" + str(boxrow) + str(boxcol)
+        )
         self.puzzle = puzzle
         self.name ="Box" + str(boxrow) + str(boxcol)
         self.boxrow = boxrow
         self.boxcol = boxcol
 
     def get_peers_in_col(self, col):
-        """
-        'Peers' are cells in the specified line but not in this box.
-        """
         allrows = range(self.puzzle.numrows)
         box_rows = range(self.boxrow, self.boxrow + self.puzzle.box_width)
         peers = []

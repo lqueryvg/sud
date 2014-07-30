@@ -136,6 +136,7 @@ class UniqueConstraints(object):
             cell.add_cell_value_set_listener(self)
 
         # TODO check current status of puzzle for violations
+        # All violations will be raised an a single exception.
 
     def cell_value_set_notification(self, cell, value):
         self.cells.remove(cell)
@@ -193,12 +194,6 @@ class SinglePosition:
         self.cell_group = cell_group
         self.name = cell_group.name + ".SinglePosition"
         for cell in cell_group.cells:
-#            if cell.value is not None:
-#                #import pdb; pdb.set_trace()
-#                raise AssertionError(
-#                    "Unexpected value in cell_group cell;"
-#                    " only cells without a value should be in a cell_group."
-#                )
             #for candidate_value in cell:
             for candidate_value in cell.candidate_set:
                 if candidate_value in self.possible_values:
@@ -348,13 +343,13 @@ class CandidateLines:
         #import pdb; pdb.set_trace()
         # Delete this cell from the index.
         for cand_value in self.index:
-            if cell in self.index[cand_value]['row'][cell.row]['cells']:
-                self.index[cand_value]['row'][cell.row]['cells'].remove(cell)
-                self.check_line(cand_value, 'row', cell.row)
+            def del_from_index(line_type, line_num):
+                if cell in self.index[cand_value][line_type][line_num]['cells']:
+                    self.index[cand_value][line_type][line_num]['cells'].remove(cell)
+                    self.check_line(cand_value, line_type, line_num)
+            del_from_index('row', cell.row)
+            del_from_index('col', cell.col)
 
-            if cell in self.index[cand_value]['col'][cell.col]['cells']:
-                self.index[cand_value]['col'][cell.col]['cells'].remove(cell)
-                self.check_line(cand_value, 'col', cell.col)
 
         logging.info(
             "in CandidateLines.cell_value_set_notification(),"
@@ -398,20 +393,19 @@ class CandidateLines:
         if value in self.index:
 
             logging.info("  value is in index")
-            #import pdb; pdb.set_trace()
-            if 'row' in self.index[value]:
-                lines = self.index[value]['row']
-                if cell.row in lines:
-                    logging.info("  removing from cells for row %s", cell.row)
-                    lines[cell.row]['cells'].remove(cell)
-                    self.check_line(value, 'row', cell.row)
+            def _remove_from_line(line_type, line_num):
+                if line_type in self.index[value]:
+                    lines = self.index[value][line_type]
+                    if line_num in lines:
+                        logging.info(
+                            "  removing from cells for %s %s",
+                            line_type, line_num
+                        )
+                        lines[line_num]['cells'].remove(cell)
+                        self.check_line(value, line_type, line_num)
 
-            if 'col' in self.index[value]:
-                lines = self.index[value]['col']
-                if cell.col in lines:
-                    logging.info("  removing from cells for col %s", cell.col)
-                    lines[cell.col]['cells'].remove(cell)
-                    self.check_line(value, 'col', cell.col)
+            _remove_from_line('col', cell.col)
+            _remove_from_line('row', cell.row)
 
 
 class Grid(object):

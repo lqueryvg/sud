@@ -191,9 +191,9 @@ class SinglePosition:
         #import pdb; pdb.set_trace()
         self.puzzle = puzzle
         self.possible_values = {}
-        self.cell_group = cell_group
+        self.cells = list(cell_group.cells)   # make a copy
         self.name = cell_group.name + ".SinglePosition"
-        for cell in cell_group.cells:
+        for cell in self.cells:
             #for candidate_value in cell:
             for candidate_value in cell.candidate_set:
                 if candidate_value in self.possible_values:
@@ -202,7 +202,7 @@ class SinglePosition:
                     self.possible_values[candidate_value] = set([cell])
 
         
-        for cell in cell_group.cells:
+        for cell in self.cells:
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
 
@@ -220,7 +220,7 @@ class SinglePosition:
         if self.puzzle is not None:
             self.puzzle.log_solution_step(
                 "SinglePosition for {} in {} {}".format(
-                value, self.cell_group.name, cell.name))
+                value, self.name, cell.name))
         cell.set_value(value)
 
     def cell_value_set_notification(self, changed_cell, value):

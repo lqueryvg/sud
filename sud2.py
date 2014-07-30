@@ -129,36 +129,36 @@ class UniqueConstraints(object):
         self.puzzle = puzzle
         self.name = name
 
-        # TODO store a *copy* of the cell group
-        self.cell_group = cell_group
+        self.cells = list(cell_group.cells)      # store a copy
 
         # listen to cells for value set
-        for cell in cell_group.cells:
+        for cell in self.cells:
             cell.add_cell_value_set_listener(self)
 
         # TODO check current status of puzzle for violations
 
-    def cell_value_set_notification(self, changed_cell, value):
-        self.cell_group.cells.remove(changed_cell)
-        for cell in self.cell_group.cells:
+    def cell_value_set_notification(self, cell, value):
+        self.cells.remove(cell)
+        for neighbor in self.cells:
             # It's possible that an over-lapping contstraint
             # group has already deleted the candidate value
-            # from this cell, so only remove candidate if
+            # from this neighbor, so only remove candidate if
             # already there, otherwise we'll get a key error.
-            if value in cell.candidate_set:
+            if value in neighbor.candidate_set:
                 if self.puzzle is not None:
                     self.puzzle.log_solution_step(
                             "RemoveCandidate {} from {} {}".format(
-                                value, self.name, cell.name))
+                                value, self.name, neighbor.name))
                 try:
-                    cell.remove_candidate(value)
+                    neighbor.remove_candidate(value)
                 except SingleCandidate:
-                    # list(my_set)[0] grabs any value from a set
-                    cell.set_value(list(cell.candidate_set)[0])
+                    neighbor.set_value(
+                        list(neighbor.candidate_set)[0]  # grab any
+                    )
                     if self.puzzle is not None:
                         self.puzzle.log_solution_step(
                                 "SingleCandidate {} value is {}".format(
-                                    cell.name, cell.value))
+                                    neighbor.name, neighbor.value))
 
     def __repr__(self):
         return self.name
@@ -193,12 +193,12 @@ class SinglePosition:
         self.cell_group = cell_group
         self.name = cell_group.name + ".SinglePosition"
         for cell in cell_group.cells:
-            if cell.value is not None:
-                #import pdb; pdb.set_trace()
-                raise AssertionError(
-                    "Unexpected value in cell_group cell;"
-                    " only cells without a value should be in a cell_group."
-                )
+#            if cell.value is not None:
+#                #import pdb; pdb.set_trace()
+#                raise AssertionError(
+#                    "Unexpected value in cell_group cell;"
+#                    " only cells without a value should be in a cell_group."
+#                )
             #for candidate_value in cell:
             for candidate_value in cell.candidate_set:
                 if candidate_value in self.possible_values:

@@ -129,11 +129,14 @@ class UniqueConstraints(object):
         self.puzzle = puzzle
         self.name = name
 
+        # TODO store a *copy* of the cell group
         self.cell_group = cell_group
 
         # listen to cells for value set
         for cell in cell_group.cells:
             cell.add_cell_value_set_listener(self)
+
+        # TODO check current status of puzzle for violations
 
     def cell_value_set_notification(self, changed_cell, value):
         self.cell_group.cells.remove(changed_cell)
@@ -292,21 +295,17 @@ class CandidateLines:
                 if cand not in self.index:
                     self.index[cand] = dict(row=dict(), col=dict())
 
-                if cell.row not in self.index[cand]['row']:
-                    self.index[cand]['row'][cell.row] = {
-                        'cells': set(),
-                        'peers': box_cell_group.get_peers_in_row(cell.row)
-                        }
-                row = self.index[cand]['row'][cell.row]
-                row['cells'].add(cell)
+                def store_peers(line_num, line_type, get_peers_fn):
+                    if line_num not in self.index[cand][line_type]:
+                        self.index[cand][line_type][line_num] = {
+                            'cells': set(),
+                            'peers': get_peers_fn(line_num)
+                            }
+                    line = self.index[cand][line_type][line_num]
+                    line['cells'].add(cell)
 
-                if cell.col not in self.index[cand]['col']:
-                    self.index[cand]['col'][cell.col] = {
-                        'cells': set(),
-                        'peers': box_cell_group.get_peers_in_col(cell.col)
-                        }
-                col = self.index[cand]['col'][cell.col]
-                col['cells'].add(cell)
+                store_peers(cell.row, 'row', box_cell_group.get_peers_in_row)
+                store_peers(cell.col, 'col', box_cell_group.get_peers_in_col)
 
             cell.add_cell_candidate_removed_listener(self)
             cell.add_cell_value_set_listener(self)
@@ -658,6 +657,8 @@ class Puzzle(Grid):
         Each word represents a cells candates (any order but no spaces).
         Any char in a word which is not in the valid range for a candidate
         (e.g. 1-9) is ignored.
+
+        TODO have single load routine that supports candidates or values
         """
         _row = 0
         _valid_candidate_values = set(map(str, range(1, self.numrows + 1)))

@@ -220,7 +220,6 @@ class TestSolvers(unittest.TestCase):
         puzzle = Puzzle(2)
 
         try:
-            #puzzle.add_unique_constraints()
             UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """
@@ -241,8 +240,6 @@ class TestSolvers(unittest.TestCase):
                    234       134    |   124       123    
                 """
                 )
-            #self.assertTrue(puzzle.get_cell(0, 3).value == '4')
-            #self.assertTrue('1' not in puzzle.get_cell(0, 3).candidates)
             self.assertTrue(puzzle.is_equal_to(expected))
         finally:
             logging.info("test_single_candidate() puzzle =\n" + puzzle.to_string())
@@ -253,7 +250,6 @@ class TestSolvers(unittest.TestCase):
         #logging.getLogger().setLevel(logging.INFO)
 
         try:
-            #puzzle.add_unique_constraints()
             UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """
@@ -337,7 +333,7 @@ class TestSolvers(unittest.TestCase):
         #logging.getLogger().setLevel(logging.INFO)
 
         try:
-            #puzzle.add_unique_constraints()
+            # TODO test this in isolation without UniqueConstraints
             UniqueConstraints.add_to_puzzle(puzzle)
             puzzle.load_from_string(
                 """

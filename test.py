@@ -233,6 +233,28 @@ class TestLoadAndParse(unittest.TestCase):
             # turn off info/debug
             logging.getLogger().setLevel(logging.CRITICAL)
 
+    def test_load_candidates_silly_values(self):
+        #logging.getLogger().setLevel(logging.INFO)
+        try:
+            #import pdb; pdb.set_trace()
+            puzzle = Puzzle(2)
+            logging.info("puzzle:\n" + puzzle.to_string())
+            #logging.info("After loading candidates:\n" + puzzle.to_string())
+            self.assertRaisesRegexp(PuzzleParseError,
+                    "invalid candidate\(s\) found in word",
+                    puzzle.load_candidates_from_string,
+                    """
+                        1&&&   x34  1234  1234   
+                        12    1234  --3-  1234   
+
+                        1234  1234  1234  123    
+                        1034   *34  1234  1234   
+                    """)
+
+        finally:
+            # turn off info/debug
+            logging.getLogger().setLevel(logging.CRITICAL)
+
 
 class TestSolvers(unittest.TestCase):
 

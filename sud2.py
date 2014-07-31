@@ -679,9 +679,8 @@ class Puzzle(Grid):
                 _values = struct.unpack('c' * self.box_width, _word)
 
                 for _v in _values:
-                    if (_v != '.'):
-                        cell = super(Puzzle, self).get_cell(_row, _col)
-                        #import pdb; pdb.set_trace()
+                    cell = super(Puzzle, self).get_cell(_row, _col)
+                    if _v in cell.candidate_set:
                         cell.set_value(_v)
                     _col += + 1
 
@@ -748,11 +747,13 @@ class Puzzle(Grid):
                         else:
                             cell.set_candidates(_word_candidates)
                     else:
-                        import pdb; pdb.set_trace()
+                        #import pdb; pdb.set_trace()
                         raise PuzzleParseError(
-                                'Row {}: invalid candidate(s) found in word;'
-                                'word is \"{}\".\nline is \"{}\"'.format(
-                                    _row, _word, _line
+                                'Row {}: invalid candidate(s) found in word\n'
+                                'word: {}\nline: {}\nvalid candidates are: {}'
+                                .format(
+                                    _row, _word, _line,
+                                    ''.join(_valid_candidate_values)
                                 )
                         )
                 _col += + 1
@@ -770,6 +771,22 @@ class Puzzle(Grid):
 class PuzzleParseError(Exception):
     pass
 
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Solve Sudoku puzzle.')
+    parser.add_argument('filename', nargs=1)
+    parser.add_argument(
+        '--boxwidth', default=3,
+        help='box width in cells')
+
+    args = parser.parse_args()
+    filename = args.filename[0]
+    puzzle = Puzzle(args.boxwidth)
+    UniqueConstraints.add_to_puzzle(puzzle)
+    SinglePosition.add_to_puzzle(puzzle)
+    puzzle.load_from_file(filename)
+    CandidateLines.add_to_puzzle(puzzle)
+    print puzzle.to_string()
 
 # The End
 # vim:foldmethod=indent:foldnestmax=2

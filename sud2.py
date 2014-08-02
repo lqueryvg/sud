@@ -3,21 +3,33 @@
 import logging
 import pprint
 
-class Counters:
+class Metrics:
+    """
+
+    Initial attempt at counting solver "misses", where an attempt is being made
+    to set or remove values which have already been set/removed, due to
+    overlapping solvers.
+
+    If these numbers can be reduced, it should make the solvers more efficient.
+
+    """
     def __init__(self):
-        self.counters = {}
+        self.metrics = {}
 
     def inc(self, name):
-        if name not in self.counters:
-            self.counters[name] = 1
+        """
+        This must be called at appropriate points in the code.
+        """
+        if name not in self.metrics:
+            self.metrics[name] = 1
         else:
-            self.counters[name] += 1
+            self.metrics[name] += 1
 
     def to_string(self):
         from pprint import pformat
-        return pformat(self.counters)
+        return pformat(self.metrics)
 
-counters = Counters()
+metrics = Metrics()
     
 class SingleCandidate(Exception):
     # Only one candidate remains after remove.
@@ -91,7 +103,7 @@ class Cell():
         logging.info("%s set_value(%s) called", self.name, value)
         #import pdb; pdb.set_trace()
         if self.value is not None:
-            counters.inc('Cell.already_set')
+            metrics.inc('Cell.already_set')
             logging.info("%s set_value(%s) already set", self.name, value)
             return
 
@@ -217,7 +229,7 @@ class UniqueConstraints(object):
                 #                "SingleCandidate {} value is {}".format(
                 #                    neighbor.name, neighbor.value))
             else:
-                counters.inc('UniqueConstraints.candidate_already_removed')
+                metrics.inc('UniqueConstraints.candidate_already_removed')
 
     def __repr__(self):
         return self.name
@@ -266,6 +278,10 @@ class SinglePosition:
 
         # If any values have only 1 possible cell, we have found some values
         for value in list(self.possible_cells_by_value):
+            #import pdb; pdb.set_trace()
+            if value not in self.possible_cells_by_value:
+                metrics.inc('SinglePosition.miss0')
+                continue
             possible_cells = self.possible_cells_by_value[value]
             if len(possible_cells) == 1:
                 self._found_value(iter(possible_cells).next(), value)
@@ -286,18 +302,18 @@ class SinglePosition:
         if value in self.possible_cells_by_value:
             del self.possible_cells_by_value[value]
         else:
-            counters.inc('SinglePosition.miss1')
+            metrics.inc('SinglePosition.miss1')
 
     def on_candidate_removed(self, cell, value):
         # delete cell from set of possibilities for that value
         if value not in self.possible_cells_by_value:
-            counters.inc('SinglePosition.miss2')
+            metrics.inc('SinglePosition.miss2')
             return
 
         possible_cells = self.possible_cells_by_value[value]
         possible_cells.discard(cell)
         if len(possible_cells) == 1:
-            counters.inc('SinglePosition.found')
+            metrics.inc('SinglePosition.found')
             self._found_value(iter(possible_cells).next(), value)
 
 
@@ -404,7 +420,7 @@ class CandidateLines:
                 if cand not in self.index:
                     continue
                 else:
-                    counters.inc('CandidateLines.miss.cand_deleted1')
+                    metrics.inc('CandidateLines.miss.cand_deleted1')
 
                 if len(self.index[cand][line_type]) == 1:
                     #import pdb; pdb.set_trace()
@@ -412,12 +428,12 @@ class CandidateLines:
                     for cell in line['peers']:
                         if cand in cell.candidate_set:
                             cell.remove_candidate(cand)
-                            counters.inc('CandidateLines.remove_cand1')
+                            metrics.inc('CandidateLines.remove_cand1')
 
                     if cand in self.index:
                         del self.index[cand][line_type]
                     else:
-                        counters.inc('CandidateLines.miss.cand_deleted2')
+                        metrics.inc('CandidateLines.miss.cand_deleted2')
 
     def on_value_set(self, cell, value):
         """
@@ -440,18 +456,18 @@ class CandidateLines:
         for cand_value in list(self.index):
             def del_from_index(line_type, line_num):
                 if cand_value not in self.index:
-                    counters.inc('CandidateLines.miss.cand3')
+                    metrics.inc('CandidateLines.miss.cand3')
                     return
 
                 if line_type not in self.index[cand_value]:
-                    counters.inc('CandidateLines.miss.line_type_deleted')
+                    metrics.inc('CandidateLines.miss.line_type_deleted')
                     return
 
                 lines = self.index[cand_value][line_type]
 
                 if line_num not in lines:
                     # assume overlapping condition deleted it
-                    counters.inc('CandidateLines.miss.line_deleted')
+                    metrics.inc('CandidateLines.miss.line_deleted')
                     return
                 
                 #    import pdb; pdb.set_trace()
@@ -491,11 +507,11 @@ class CandidateLines:
                 for peer_cell in line['peers']:
                     if value in peer_cell.candidate_set:
                         peer_cell.remove_candidate(value)
-                        counters.inc('CandidateLines.remove_cand1')
+                        metrics.inc('CandidateLines.remove_cand1')
                 if value in self.index:
                     del self.index[value][line_type]
                 else:
-                    counters.inc('CandidateLines.miss.cand4')
+                    metrics.inc('CandidateLines.miss.cand4')
 
     def on_candidate_removed(self, cell, value):
         """
@@ -745,8 +761,10 @@ class Puzzle(Grid):
                 for _v in _values:
                     cell = super(Puzzle, self).get_cell(_row, _col)
                     if _v in cell.candidate_set:
+                        metrics.inc('initially_given')
                         cell.set_value(_v)
-                    _col += + 1
+                    metrics.inc('total_cells')
+                    _col += 1
 
             _row = _row + 1
         return
@@ -848,12 +866,14 @@ def main():
     args = parser.parse_args()
     filename = args.filename[0]
     puzzle = Puzzle(args.boxwidth)
+
+    # TODO why can't UniqueConstraints be added after loading puzzle ?
     UniqueConstraints.add_to_puzzle(puzzle)
-    SinglePosition.add_to_puzzle(puzzle)
     puzzle.load_from_file(filename)
+    SinglePosition.add_to_puzzle(puzzle)
     CandidateLines.add_to_puzzle(puzzle)
     print puzzle.to_string()
-    print counters.to_string()
+    print metrics.to_string()
 
 if __name__ == '__main__':
     main()

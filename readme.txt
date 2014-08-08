@@ -7,6 +7,11 @@ Objectives
   the simplest and only applying the more complex strategies
   when needed.
 
+  Rather than re-invent the wheel, I'll use the same names for the various
+  solving techniques as found here:
+
+  http://www.sudokuoftheday.com/techniques
+
 - Make the solver code easy to extend when adding new strategies.  I.e.
   adding a new strategy should not require changing code for existing
   strategies.
@@ -82,15 +87,10 @@ Listeners
 
 
 Solving Techniques
-------------------
-
-Rather than re-invent the wheel, I'll use the same names for the various
-solving techniques as found here:
-
-http://www.sudokuoftheday.com/techniques
+==================
 
 Simple Techniques
-=================
+-----------------
 
 Single Position
 
@@ -103,7 +103,7 @@ Single Candidate
     When there is only one possible candidate remaining for a particular cell.
 
 Medium Techniques
-=================
+-----------------
 
 Candidate Lines
 

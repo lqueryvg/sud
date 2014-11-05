@@ -48,7 +48,7 @@ CellGroup
 
 UniqueConstraint
 
-    UniqueConstraint ensures that there are no repeated values within a cell
+    UniqueConstraint ensures there are no repeated values within a cell
     group.
 
     When a cell value becomes known, the value is removed from the
@@ -57,7 +57,7 @@ UniqueConstraint
 Listeners
 
     When a cell is changed the cell can notify other objects.  Objects must
-    register themselves with cells to say that they are interested.
+    register themselves with cells to say they are interested.
     
     Each cell has 2 lists of listeners waiting for notifications, one list
     for each of the following types of event:
@@ -74,7 +74,7 @@ Listeners
         notified. Then all listeners and candidates are removed from the
         cell.
 
-        NOTE that CandidateRemoved listeners are *NOT* notified when the
+        NOTE CandidateRemoved listeners are *NOT* notified when the
         candidate list is cleared in this situation, since it would generate a
         lot of unecessary calls.  For example, if there are 4 candidates and 5
         listeners, there would be 4 x 5 = 20 calls.
@@ -108,7 +108,7 @@ Medium Techniques
 Candidate Lines
 
     If the only candidates for a value in a box lie on a line (i.e.
-    a row or column) within that box, eliminates the value from
+    a row or column) within the box, eliminates the value from
     candidates of cells in other boxes on the same line.
 
     This is done by maintaining an index as follows:
@@ -119,5 +119,5 @@ Candidate Lines
 
     When a value has only one possible row/column remaining, it gets deleted
     from the candidate lists of cells in other boxes in the same row/column,
-    and the row/column index for that value can be deleted (since it's served
+    and the row/column index for the value can be deleted (since it's served
     its purpose).

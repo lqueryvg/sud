@@ -20,14 +20,19 @@
 
 ### Cells, Rows, Columns, Boxes
 
-Each puzzle cell contains a value from 1 to 9.  Cells are arranged in a grid of
-9 rows and 9 columns.  The grid is divided into nine non-overlapping 3x3 boxes.
-    
-Note: Different sized grids (4x4, 9x9, 16x16, etc) are only partially
-supported; specifically the cell values when reading from a string or file
-must be 1 character, but internally the values in each cell are expected to be
-1 up to the box width squared.  This obviously wouldn't work for 16x16 grids.
 
+- Each puzzle cell contains a value from 1 to 9.  
+
+- Cells are arranged in a grid of 9 rows and 9 columns.
+
+- The top left cell of the grid is at row 0, column 0.
+
+- Cells are named "Cell00", "Cell01" etc and include their row / column
+  coordinate.
+
+- The grid is divided into nine non-overlapping 3x3 boxes.
+
+    
 ### Candidates
 
 The set of possible values for a cell when the cell value is not yet known.
@@ -36,9 +41,9 @@ numbers from 1 to 9 inclusive.
 
 ### CellGroup
 
-A grouping of 9 cells in a row, column or box.  The Cell Group is given a name,
-eg. 'Row0', 'Col3' or 'Box03'.  For boxes, the name includes the row and col
-number of the top-left cell in the box.
+A CellGroup is a grouping of 9 cells in a row, column or box.  The Cell Group
+is given a name, eg. 'Row0', 'Col3' or 'Box03'.  For boxes, the name includes
+the row and col number of the top-left cell in the box.
 
 Every cell is a member of exactly 3 cell groups: a row, a column and a box.
 
@@ -106,7 +111,7 @@ candidates of cells in other boxes on the same line.
 
 This is done by maintaining an index as follows:
 
-> For every value not yet known in the box, index the list of rows and
+> For every value not yet known in a box, index the list of rows and
 > cols the value can be on.  For each of those rows/cols, store the list
 > of cells within the box the value can be in.
 

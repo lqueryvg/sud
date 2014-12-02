@@ -78,6 +78,9 @@ class Cell():
         Bypasses all checks and propagation.
         Intended for testing.
         """
+        if type(value) is not str:
+            raise AssertionError("add_candidate() needs a str")
+
         self.candidate_set.add(value)
 
     def check_single_candidate(self):
@@ -567,10 +570,9 @@ class CandidateLines:
 
 class Grid(object):
     """
-    Implements a grid of values (not to be confused with Cell values) and
-    provides a way of accessing them individually or as groups (rows, columns
-    or boxes).  When used by Puzzle, the grid values are references to Cell
-    objects.
+    Implements a grid of cells and provides a way of accessing them
+    individually or as groups (rows, columns or boxes).  When used by Puzzle,
+    the grid values are references to Cell objects.
     """
 
     def __init__(self, box_width):
@@ -814,84 +816,15 @@ class Puzzle(Grid):
 
     def load_candidates_from_iterable(self, iterable):
         """
-        Each line is split on whitespace into words.
-        Each word represents a cells candates (any order but no spaces).
-        Any char in a word which is not in the valid range for a candidate
-        (e.g. 1-9) is ignored.
-
-        TODO have single load routine that supports candidates or values
-        """
-        _row = 0
-        _valid_candidate_values = set(map(str, range(1, self.numrows + 1)))
-        for _line in iterable:
-            import re
-
-            # support script style comments with '#'
-            _line = re.sub(r'#.*$', '', _line)  # strip them
-            #import pdb; pdb.set_trace()
-            _line = re.sub(r'\|', '', _line)  # delete any decorative pipes
-
-            _cell_words = _line.split()
-            _num_cells = len(_cell_words)
-
-            if _num_cells == 0:
-                continue        # skip blank lines
-
-            if (_row >= self.numrows):
-                raise PuzzleParseError(
-                        'Row {}: too many rows, expected {}.'.format(
-                            _row, self.numrows)
-                        )
-
-            if _num_cells != self.box_width**2:
-                #import pdb; pdb.set_trace()
-                raise PuzzleParseError(
-                    ('Row {}: unexpected number of words; expect {} (one per cell); '
-                    + 'found {}.\nline is {}').format(
-                        _row, self.box_width**2, _num_cells, _line
-                ))
-
-            _col = 0
-            #import pdb; pdb.set_trace()
-            for _word in _cell_words:
-                cell = super(Puzzle, self).get_cell(_row, _col)
-                if _word == '.':
-                    pass
-                    # ignore
-                else:
-                    _word_candidates = list(_word)
-                    if set(_word_candidates).issubset(_valid_candidate_values):
-                        if len(_word_candidates) == 1:
-                            cell.set_value(_word_candidates[0])
-                        else:
-                            cell.set_candidates(_word_candidates)
-                    else:
-                        #import pdb; pdb.set_trace()
-                        raise PuzzleParseError(
-                                'Row {}: invalid candidate(s) found in word\n'
-                                'word: {}\nline: {}\nvalid candidates are: {}'
-                                .format(
-                                    _row, _word, _line,
-                                    ''.join(_valid_candidate_values)
-                                )
-                        )
-                _col += + 1
-
-            _row = _row + 1
-        return
-
-    def load_candidates_from_iterable2(self, iterable):
-        """
-        Expect no leading whitespace.
-        Blank lines & lines starting with '#' are skipped.
-        Each row of cells is represented by 3 consecutive rows of text.
-        Row 1 = 123, row 2 = 456, row 3 is 789.
-        Every candidate must appear in it's correct position. I.e.
-        1,4,7 in column 1, 2,5,8 in column 2 and 3,6,9 in column 3.
-        Horizontally the cells are separated by a single space except
-        boxes which are separated by space pipe space (' | ').
-
-        TODO have single load routine that supports candidates or values
+        - Expect no indentation (so use dedent() in tests).
+        - Cells are represented as a grid of characters,
+          the candidate values *must* appear in the correct position in
+          that grid. E.g.  Row 1 = 123, row 2 = 456, row 3 is 789, and
+          147 in column 1, 258 in column 2 and 369 in column 3.
+        - Vertically the cells are separated by a single space except
+          boxes which are separated by space pipe space (' | ').
+        - Horizontally, cells are separated by an extra line. The chars
+          in the separator line can be anything and are ignored.
         """
         self.clear_all_candidates()
         _cell_row = 0
@@ -901,69 +834,59 @@ class Puzzle(Grid):
             import re
             logging.info("_line: %s", _line)
 
-            #_line = re.sub(r'^#.*$', '', _line)  # strip comments
             #import pdb; pdb.set_trace()
             _line = re.sub(r' \| ', ' ', _line)  # all cells sep by space
 
-            #if re.match(r'^$', _line)   # skip blank lines
-
             _col = 0
-            #import pdb; pdb.set_trace()
-            for _text_col in range(self.numcols * (self.box_width + 1) - 1):
+            char_width = self.box_width + 1     # including space
+            for _text_col in range(self.numcols * char_width - 1):
 
                 # skip separator rows & columns
-                if (_text_row % (self.box_width + 1)) == self.box_width:
+                if (_text_row % char_width) == self.box_width:
                     continue
 
-                if (_text_col % (self.box_width + 1)) == self.box_width:
+                if (_text_col % char_width) == self.box_width:
                     continue
 
-                try:
-                    char = _line[_text_col]
-                except:
-                    import pdb; pdb.set_trace()
+                if _text_col >= len(_line):
+                    raise PuzzleParseError(
+                            'line too short, expect at least {} chars\n'
+                             .format(self.numcols * char_width + 2,))
+
+                char = _line[_text_col]
 
                 if char == ' ':    # skip blank char
                     continue
 
                 _value = char
-                _expected_value = str(
-                    ((_text_row % (self.box_width + 1)) * self.box_width) +
-                    1 + (_text_col % (self.box_width + 1))
-                    )
+                _expected_value = ((_text_row % char_width) * self.box_width) \
+                                 + (_text_col % char_width) + 1
+                _expected_value = str(_expected_value)
 
                 if _value != _expected_value:
                     raise PuzzleParseError(
-                            'Invalid candidate found\n'
-                            'Expected {}, found {}\n'
-                            'Line {}, col {}\n{}\n'
+                            'invalid candidate found\n'
+                            'expected {}, found {}\n'
+                            'line {}, col {}\n{}\n'
                              .format(
                                     _expected_value, _value,
                                     _text_row, _text_col, _line,
                              ))
 
-                _cell_col = _text_col / (self.box_width + 1)
-                _cell_row = _text_row / (self.box_width + 1)
+                _cell_col = _text_col / char_width
+                _cell_row = _text_row / char_width
+
+                logging.info("add %s to cell %s, %s", _value, _cell_row, _cell_col)
 
                 cell = super(Puzzle, self).get_cell(_cell_row, _cell_col)
-                logging.info("add %s to cell %s, %s", _value, _cell_row, _cell_col)
-                #import pdb; pdb.set_trace()
-                # TODO make these set and add functions check for correct
-                # type, i.e. char
                 cell.add_candidate(_expected_value)
 
             _text_row = _text_row + 1
         self.check_single_candidates()
         return
 
-    def load_candidates_from_string2(self, string):
-        self.load_candidates_from_iterable2(iter(string.splitlines()))
-
     def load_candidates_from_string(self, string):
         self.load_candidates_from_iterable(iter(string.splitlines()))
-
-    def load_candidates_from_file(self, pathname):
-        self.load_candidates_from_iterable(open(pathname))
 
 
 class PuzzleParseError(Exception):

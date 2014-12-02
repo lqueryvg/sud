@@ -181,81 +181,14 @@ class TestLoadAndParse(unittest.TestCase):
     def test_load_candidates_unexpected_number_of_words(self):
         puzzle = Puzzle(2)
         self.assertRaisesRegexp(PuzzleParseError,
-                'unexpected number of words',
+                'invalid candidate found',
                 puzzle.load_candidates_from_string, ('wibble')
                 )
 
-    def test_load_candidates_too_many_rows(self):
+    def test_load_line_too_short(self):
         puzzle = Puzzle(2)
-        self.assertRaisesRegexp(PuzzleParseError,
-                'too many rows',
-                puzzle.load_candidates_from_string,
-                """
-                    . . . .
-                    . . . .
-
-                    . . . .
-                    . . . .
-
-                    . . . .
-                """)
-
-    def test_load_candidates_some_values(self):
-        puzzle1 = Puzzle(2)
-        puzzle2 = Puzzle(2)
-        #logging.getLogger().setLevel(logging.INFO)
-        try:
-            logging.info("puzzle1:\n" + puzzle1.to_string())
-            logging.info("puzzle2:\n" + puzzle2.to_string())
-            #import pdb; pdb.set_trace()
-            puzzle1.load_candidates_from_string(
-                """
-                    1       34  1234  1234   
-                    12    1234    3   1234   
-
-                    1234  1234  1234  123    
-                    1234    34  1234  1234   
-
-                """)
-            puzzle2.load_candidates_from_string(
-                """
-                    1       34     .     .   
-                    12       .    3      .   
-
-                       .     .     .  123    
-                       .    34     .     .   
-                """)
-            logging.info("puzzle1:\n" + puzzle1.to_string())
-            logging.info("puzzle2:\n" + puzzle2.to_string())
-            self.assertTrue(puzzle1.is_equal_to(puzzle2))
-            #logging.info("After loading candidates:\n" + puzzle.to_string())
-
-        finally:
-            # turn off info/debug
-            logging.getLogger().setLevel(logging.CRITICAL)
-
-    def test_load_candidates_silly_values(self):
-        #logging.getLogger().setLevel(logging.INFO)
-        try:
-            #import pdb; pdb.set_trace()
-            puzzle = Puzzle(2)
-            logging.info("puzzle:\n" + puzzle.to_string())
-            #logging.info("After loading candidates:\n" + puzzle.to_string())
-            self.assertRaisesRegexp(PuzzleParseError,
-                    "invalid candidate\(s\) found in word",
-                    puzzle.load_candidates_from_string,
-                    """
-                        1&&&   x34  1234  1234   
-                        12    1234  --3-  1234   
-
-                        1234  1234  1234  123    
-                        1034   *34  1234  1234   
-                    """)
-
-        finally:
-            # turn off info/debug
-            logging.getLogger().setLevel(logging.CRITICAL)
-
+        self.assertRaisesRegexp(PuzzleParseError, 'line too short',
+                puzzle.load_candidates_from_string, '12')
 
 class TestSolvers(unittest.TestCase):
 
@@ -275,15 +208,21 @@ class TestSolvers(unittest.TestCase):
                 """
                 )
             expected = Puzzle(2)
-            expected.load_candidates_from_string(
+            expected.load_candidates_from_string(dedent(
+                """\
+                    1   2 |      
+                          | 3   4
+
+                          | 12 12
+                    34 34 |      
+                    ------+------
+                     2 1  | 12 12
+                    34 34 |  4 3 
+
+                     2 1  | 12 12
+                    34 34 |  4 3 
                 """
-                    1         2     |    3         4     
-                    34        34    |    12        12    
-                #-------------------+--------------------
-                   234       134    |   124       123    
-                   234       134    |   124       123    
-                """
-                )
+            ))
             self.assertTrue(puzzle.is_equal_to(expected))
         finally:
             logging.info("test_single_candidate() puzzle =\n" + puzzle.to_string())
@@ -318,15 +257,21 @@ class TestSolvers(unittest.TestCase):
                     + puzzle.to_string())
 
             expected = Puzzle(2)
-            expected.load_candidates_from_string(
+            expected.load_candidates_from_string(dedent(
+                """\
+                    1   2 |  2  2
+                       34 | 34 34
+
+                     2  2 |  2 1 
+                    34 34 | 34   
+                    ------+------
+                     2  2 | 1   2
+                    34 34 |    34
+
+                     2 1  |  2  2
+                    34    | 34 34
                 """
-                    1        234    |   234       234
-                   234       234    |   234       1
-                #-------------------+--------------------
-                   234       234    |    1        234
-                   234       1      |   234       234
-                """
-                )
+            ))
             logging.info("expected puzzle = \n" + expected.to_string())
 
             self.assertTrue(puzzle.is_equal_to(expected))
@@ -343,15 +288,21 @@ class TestSolvers(unittest.TestCase):
         puzzle = Puzzle(2)
         #logging.getLogger().setLevel(logging.INFO)
         try:
-            puzzle.load_candidates_from_string(
-                """
-                    1      2    1234  1234   
-                      34    34  1234  1234   
+            puzzle.load_candidates_from_string(dedent(
+                """\
+                    1   2 | 12 12
+                          | 34 34
 
-                    1234  1234  1234  1234   
-                    1234  1234  1234  1234   
+                          | 12 12
+                    34 34 | 34 34
+                    ------+------
+                    12 12 | 12 12
+                    34 34 | 34 34
+
+                    12 12 | 12 12
+                    34 34 | 34 34
                 """
-                )
+            ))
             logging.info("before adding CandidateLines puzzle = \n"
                     + puzzle.to_string())
             #puzzle.add_CandidateLines()
@@ -359,15 +310,21 @@ class TestSolvers(unittest.TestCase):
             logging.info("After adding CandidateLines puzzle = \n"
                     + puzzle.to_string())
             expected = Puzzle(2)
-            expected.load_candidates_from_string(
-                """
-                    1      2    1234  1234   
-                      34    34  12    12     
+            expected.load_candidates_from_string(dedent(
+                """\
+                    1   2 | 12 12
+                          | 34 34
 
-                    1234  1234  1234  1234   
-                    1234  1234  1234  1234   
+                          | 12 12
+                    34 34 |      
+                    ------+------
+                    12 12 | 12 12
+                    34 34 | 34 34
+
+                    12 12 | 12 12
+                    34 34 | 34 34
                 """
-                )
+            ))
             self.assertTrue(puzzle.is_equal_to(expected))
         finally:
             logging.getLogger().setLevel(logging.CRITICAL)
@@ -376,31 +333,28 @@ class TestSolvers(unittest.TestCase):
         puzzle = Puzzle(2)
         #logging.getLogger().setLevel(logging.INFO)
         try:
-            puzzle.load_candidates_from_string(
-                """
-                    1234  1234    34    34   
-                    1234  1234  1234  1234   
+            puzzle.load_candidates_from_string(dedent(
+                """\
+                    12 12 |      
+                    34 34 | 34 34
 
-                    1234  1234  1234  1234   
-                    1234  1234  1234  1234   
+                    12 12 | 12 12
+                    34 34 | 34 34
+                    ------+------
+                    12 12 | 12 12
+                    34 34 | 34 34
+
+                    12 12 | 12 12
+                    34 34 | 34 34
                 """
-                )
+            ))
             logging.info("before adding CandidateLines puzzle = \n"
                     + puzzle.to_string())
-            #puzzle.add_CandidateLines()
             CandidateLines.add_to_puzzle(puzzle)
             logging.info("After adding CandidateLines puzzle = \n"
                     + puzzle.to_string())
             expected = Puzzle(2)
-#            expected.load_candidates_from_string(
-#                """
-#                    1234  1234    34    34   
-#                      34    34  1234  1234   
-#
-#                    1234  1234  1234  1234   
-#                    1234  1234  1234  1234   
-#                """
-            expected.load_candidates_from_string2(dedent(
+            expected.load_candidates_from_string(dedent(
                 """\
                     12 12 |      
                     34 34 | 34 34
@@ -414,7 +368,7 @@ class TestSolvers(unittest.TestCase):
                     12 12 | 12 12
                     34 34 | 34 34
                 """
-                ))
+            ))
             logging.info("Expected = \n"
                     + expected.to_string())
             self.assertTrue(puzzle.is_equal_to(expected))
@@ -447,20 +401,7 @@ class TestSolvers(unittest.TestCase):
             logging.info("Before puzzle.add_CandidateLines:\n" + puzzle.to_string())
 
             expected = Puzzle(3)
-            expected.load_candidates_from_string2(dedent(
-#                """
-#                    1         2         3    |  456789    456789    456789  |  456789    456789    456789
-#                    4         5         6    |  123789    123789    123789  |  123789    123789    123789
-#                   789       789       789   |123456789 123456789 123456789 |123456789 123456789 123456789
-#                #----------------------------+------------------------------+------------------------------
-#                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
-#                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
-#                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
-#                #----------------------------+------------------------------+------------------------------
-#                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
-#                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
-#                2356789   1346789   1245789  |123456789 123456789 123456789 |123456789 123456789 123456789
-#                """
+            expected.load_candidates_from_string(dedent(
             """\
                1    2    3 |             |            
                            | 456 456 456 | 456 456 456
@@ -473,7 +414,7 @@ class TestSolvers(unittest.TestCase):
                            | 123 123 123 | 123 123 123
                            | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
-               #-----------+-------------+------------
+               ------------+-------------+------------
                 23 1 3 12  | 123 123 123 | 123 123 123
                 56 4 6 45  | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
@@ -485,7 +426,7 @@ class TestSolvers(unittest.TestCase):
                 23 1 3 12  | 123 123 123 | 123 123 123
                 56 4 6 45  | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
-               #-----------+-------------+------------
+               ------------+-------------+------------
                 23 1 3 12  | 123 123 123 | 123 123 123
                 56 4 6 45  | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
@@ -505,7 +446,7 @@ class TestSolvers(unittest.TestCase):
             CandidateLines.add_to_puzzle(puzzle)
 
             logging.info("After puzzle.add_CandidateLines:\n" + puzzle.to_string())
-            expected.load_candidates_from_string2(dedent(
+            expected.load_candidates_from_string(dedent(
             """\
                1    2    3 |             |            
                            | 456 456 456 | 456 456 456
@@ -518,7 +459,7 @@ class TestSolvers(unittest.TestCase):
                            | 123 123 123 | 123 123 123
                            | 456 456 456 | 456 456 456
                789 789 789 |             |            
-               #-----------+-------------+------------
+               ------------+-------------+------------
                 23 1 3 12  | 123 123 123 | 123 123 123
                 56 4 6 45  | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
@@ -530,7 +471,7 @@ class TestSolvers(unittest.TestCase):
                 23 1 3 12  | 123 123 123 | 123 123 123
                 56 4 6 45  | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
-               #-----------+-------------+------------
+               ------------+-------------+------------
                 23 1 3 12  | 123 123 123 | 123 123 123
                 56 4 6 45  | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
@@ -567,7 +508,7 @@ class TestSolvers(unittest.TestCase):
             logging.info("After set_value calls:\n" + puzzle.to_string())
             logging.getLogger().setLevel(logging.CRITICAL)
             expected = Puzzle(3)
-            expected.load_candidates_from_string2(dedent(
+            expected.load_candidates_from_string(dedent(
             """\
                1    2    3 | 123 123 123 | 123 123 123
                            | 456 456 456 | 456 456 456
@@ -580,7 +521,7 @@ class TestSolvers(unittest.TestCase):
                123 123 123 | 123 123 123 | 123 123 123
                456 456 456 | 456 456 456 | 456 456 456
                789 789 789 |             |            
-               #-----------+-------------+------------
+               ------------+-------------+------------
                123 123 123 | 123 123 123 | 123 123 123
                456 456 456 | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
@@ -592,7 +533,7 @@ class TestSolvers(unittest.TestCase):
                123 123 123 | 123 123 123 | 123 123 123
                456 456 456 | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789
-               #-----------+-------------+------------
+               ------------+-------------+------------
                123 123 123 | 123 123 123 | 123 123 123
                456 456 456 | 456 456 456 | 456 456 456
                789 789 789 | 789 789 789 | 789 789 789

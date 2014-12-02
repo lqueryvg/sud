@@ -121,8 +121,8 @@ class TestGrid(unittest.TestCase):
                             (1, 0, 3),
                             (1, 1, 4)
         ]:
-            grid.set_value(r, c, v)
-        grid.set_value(1, 1, 4)
+            grid.set_cell(r, c, v)
+        grid.set_cell(1, 1, 4)
 
         self.assertTrue(
             (
@@ -142,7 +142,7 @@ class TestGrid(unittest.TestCase):
                             (1, 0, 3),
                             (1, 1, 4)
         ]:
-            grid.set_value(r, c, v)
+            grid.set_cell(r, c, v)
 
         box = grid.get_box_cells(0, 0)
         self.assertTrue(len(box) == 4)
@@ -225,7 +225,8 @@ class TestSolvers(unittest.TestCase):
             ))
             self.assertTrue(puzzle.is_equal_to(expected))
         finally:
-            logging.info("test_single_candidate() puzzle =\n" + puzzle.to_string())
+            logging.info("test_single_candidate() puzzle =\n" +
+                    puzzle.to_string())
             logging.getLogger().setLevel(logging.CRITICAL)
 
     def test_single_position(self):

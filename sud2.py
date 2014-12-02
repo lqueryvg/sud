@@ -75,7 +75,7 @@ class Cell():
 
     def add_candidate(self, value):
         """
-        Bypasses all checks and propagation.
+        *BYPASSES* propagation.
         Intended for testing.
         """
         if type(value) is not str:
@@ -83,9 +83,12 @@ class Cell():
 
         self.candidate_set.add(value)
 
-    def check_single_candidate(self):
+    def onload_check_single_candidate(self):
         """
-        Bypasses propagation.
+        *BYPASSES* propagation.
+        Used after candidates have been loaded from an external source.
+        If there is only one candidate left, clear the candidate set
+        and set the cells value.
         """
         if self.candidate_set.has_single_candidate():
             self.value = self.candidate_set.get_any_candidate()
@@ -96,8 +99,8 @@ class Cell():
 
     def set_candidates(self, candidate_values):
         """
-        Bypasses all checks and propagation.
-        Intended for testing.
+        *BYPASSES* propagation.
+        Used after candidates have been loaded from an external source.
         """
         self.candidate_set.clear()
         self.candidate_set = CandidateSet(candidate_values)
@@ -127,6 +130,15 @@ class Cell():
             return str(self.value)
 
     def set_value(self, value):
+        """
+        - Raises error if value not in candidate set.
+        - Clears candidate set.
+        - Notifies all value_set listeners.
+        - DOES NOT notify candidate_removed listeners.
+        - Deletes all listeners from cell.
+
+        Does nothing if cell already set.
+        """
         logging.info("%s set_value(%s) called", self.name, value)
         #import pdb; pdb.set_trace()
         if self.value is not None:
@@ -154,6 +166,12 @@ class Cell():
         del self.candidate_removed_listeners[:]
 
     def remove_candidate(self, value):
+        """
+        - Removes candidate value from cell and notifies
+          any candidate_removed listeners.
+        - If one candidate remains, calls set_value() which
+          may propagate.
+        """
         logging.debug(
             "Cell remove_candidate() %s from %s", value, self.name)
 
@@ -172,9 +190,13 @@ class Cell():
 
 class CellGroup(object):
     """
-    Just a grouping of cells with an optional name.
+    A group of cell references with an optional name.
+    Used to implement boxes, rows and columns.
     """
     def __init__(self, cells=[], name="CellGroup"):
+        """
+        Init will a list of cells and optional name.
+        """
         self.name = name
         self.cells = cells
 
@@ -203,6 +225,15 @@ class UniqueConstraints(object):
             )
 
     def __init__(self, cell_group, puzzle=None, name=None):
+        """
+
+        Check that the group does not already contain the same value in more
+        than one cell. If so it raises an exception containing a list of
+        violations found.
+
+        Sets itself as a value_set listener for all cells in the group which
+        don't already have a value set.
+        """
         # Optionally point back to the puzzle
         self.puzzle = puzzle
         if name is None:
@@ -213,7 +244,6 @@ class UniqueConstraints(object):
         self.cells = list(cell_group.cells)      # store a copy
 
         # Check for violations.
-        # A list of violations will be raised in a single exception.
         cell_for_value = dict()
         violations = []
         for cell in self.cells:
@@ -225,15 +255,17 @@ class UniqueConstraints(object):
                     violations.append([value, cell, other_cell])
                 else:
                     cell_for_value[value] = cell
+            else:
+                # listen to cells for value set
+                cell.add_cell_value_set_listener(self)
 
         if len(violations) > 0:
             raise Exception(self.name + " broken", violations)
 
-        # listen to cells for value set
-        for cell in self.cells:
-            cell.add_cell_value_set_listener(self)
-
     def on_value_set(self, cell, value):
+        """
+        Remove this cell from the constraint group
+        """
         self.cells.remove(cell)
         for neighbor in self.cells:
             # It's possible that an over-lapping contstraint
@@ -247,14 +279,6 @@ class UniqueConstraints(object):
                                 value, self.name, neighbor.name))
                 #try:
                 neighbor.remove_candidate(value)
-                #except SingleCandidate:
-                #    neighbor.set_value(
-                #        list(neighbor.candidate_set)[0]  # grab any
-                #    )
-                #    if self.puzzle is not None:
-                #        self.puzzle.log_solution_step(
-                #                "SingleCandidate {} value is {}".format(
-                #                    neighbor.name, neighbor.value))
             else:
                 metrics.inc('UniqueConstraints.candidate_already_removed')
 
@@ -365,9 +389,11 @@ class CandidateLines:
 
     def __init__(self, box_cell_group, puzzle=None):
         """
-        For every value not yet known in the box, index the list of rows and
-        cols the value can be on.  For each of those rows/cols, store the
-        list of cells within the box the value can be in.
+        Create a two way index:
+        - For every unknown value in the box, store the list of rows and
+          cols the value can be on.
+        - For each of those rows/cols, store the
+          list of cells within the box the value can be in.
         """
         assert(puzzle is not None)
         
@@ -464,11 +490,9 @@ class CandidateLines:
 
     def on_value_set(self, cell, value):
         """
-        Once the position of a value is known, delete
-        it from the index, and also delete the cell from the lists
-        of cells within the index.
+        Delete all references to the cell and the value within the index.
         Each time the cell is deleted, use check_line() to
-        see if a CandidateLine condition has been found.
+        see if a new CandidateLine condition has been found.
         """
 
         logging.info("CandidateLines.on_value_set()")
@@ -543,7 +567,7 @@ class CandidateLines:
     def on_candidate_removed(self, cell, value):
         """
         Remove the changed cell from the set of cells on the same
-        row and column for the candiate value that has been removed.
+        row and column for the removed candiate value.
         """
 
         logging.info("CandidateLines.on_candidate_removed()")
@@ -590,36 +614,49 @@ class Grid(object):
                 row.append(None)
             self.grid.append(row)
 
-    def check_single_candidates(self):
+    def onload_check_single_candidates(self):
         """
         Bypasses propagation.
+        Call cell.onload_check_single_candidate() for all grid cells.
+        Used after candidates have been loaded from an external source.
         """
         for row in self.grid:
             for cell in row:
-                cell.check_single_candidate()
+                cell.onload_check_single_candidate()
 
-    def set_value(self, row, col, value):
-        """
-        Index by row then column.
-        """
-        self.grid[row][col] = value
+    def set_cell(self, row, col, cell):
+        self.grid[row][col] = cell
 
     def get_cell(self, row, col):
         return self.grid[row][col]
 
     def get_row_cells(self, rownum):
+        """
+        Get all cells in a row.
+        """
         _row = []
         for colnum in range(self.numcols):
             _row.append(self.get_cell(rownum, colnum))
         return _row
 
     def get_col_cells(self, colnum):
+        """
+        Get all cells in a column.
+        """
         _col = []
         for rownum in range(self.numrows):
             _col.append(self.get_cell(rownum, colnum))
         return _col
 
+    def get_all_cells(self):
+        from itertools import chain
+        #import pdb; pdb.set_trace()
+        return list(chain.from_iterable(self.grid))
+
     def get_box_cells(self, rownum, colnum):
+        """
+        Expects coord of top left cell in box.
+        """
         _box = []
         for boxrow in range(rownum, rownum + self.box_width):
             for boxcol in range(colnum, colnum + self.box_width):
@@ -628,29 +665,33 @@ class Grid(object):
         return _box
 
     def to_string(self):
-        s = ""
+        max_len = 1
+        for cell in self.get_all_cells():
+            max_len = max(max_len, len(cell.candidate_set))
+
+        s = ''
         for rownum in range(self.numrows):
             if rownum > 0:
-                s = s + "\n"
-                if rownum % self.box_width == 0:
-                    t = '+'.join(["-"*10*self.box_width]*self.box_width) + "\n"
-                    l = list(t)
-                    l[0] = '#'
-                    s += ''.join(l)
+                s += "\n"
+                if rownum % self.box_width == 0:    # spacer line
+                    s += ''.join("\n")
             colnum = 0
             for cell in self.get_row_cells(rownum):
                 if colnum > 0 and colnum % self.box_width == 0:
-                    s = s + "|"
+                    s += ' '
                 if cell.value is None:
-                    s = s + ''.join(str(x) for x in sorted(
-                        cell.candidate_set)
-                    ).center(10, " ")
+                    s += ''.join(
+                        str(x) for x in sorted(cell.candidate_set)
+                    ).center(max_len, ' ')
                 else:
-                    s = s + str(cell.value).center(10, " ")
+                    s += str(cell.value).center(max_len, ' ')
                 colnum = colnum + 1
         return s
 
     def is_equal_to(self, other):
+        """
+        True if all values and candidates match.
+        """
         for row in range(self.numrows):
             for col in range(self.numcols):
                 my_cell = self.get_cell(row, col)
@@ -708,7 +749,7 @@ class Puzzle(Grid):
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
-                super(Puzzle, self).set_value(
+                super(Puzzle, self).set_cell(
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         self.init_all_candidates()
@@ -717,11 +758,18 @@ class Puzzle(Grid):
         self.init_groups()
 
     def clear_all_candidates(self):
+        """
+        Clear candidate values for all cells.
+        Called when candidates are loaded from an external source.
+        """
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
                 super(Puzzle, self).get_cell(rownum, colnum).clear_candidates()
 
     def init_all_candidates(self):
+        """
+        Set candidate sets for all cells to all possible candidate values.
+        """
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
                 super(Puzzle, self).get_cell(rownum, colnum).set_candidates(
@@ -732,6 +780,9 @@ class Puzzle(Grid):
         self.solution_steps.append(string)
 
     def init_groups(self):
+        """
+        Create Row, Column and Box cell groups.
+        """
         for rownum in range(self.numrows):
             _row_cells = super(Puzzle, self).get_row_cells(rownum)
             self.cell_groups.append(CellGroup(_row_cells,
@@ -752,6 +803,18 @@ class Puzzle(Grid):
 
     def load_from_iterable(self, iterable):
         """
+        Example format is as follows:
+            -6- 3-- 8-4
+            537 -9- ---
+            -4- --6 3-7
+
+            --- -51 238
+            --- --- ---
+            713 62- -4-
+
+            3-6 4-- -1-
+            --- -6- 523
+            1-2 --9 -8-
         Each line is split into words.
         Each word represents a row of a box and since
         all boxes should be the same width, each word
@@ -816,11 +879,28 @@ class Puzzle(Grid):
 
     def load_candidates_from_iterable(self, iterable):
         """
-        - Expect no indentation (so use dedent() in tests).
-        - Cells are represented as a grid of characters,
-          the candidate values *must* appear in the correct position in
-          that grid. E.g.  Row 1 = 123, row 2 = 456, row 3 is 789, and
+        Load candidates from character input source.
+        Example format is as follows for a 4x4 grid
+        (9x9 grid is similar).
+                    1   2 |      
+                          | 3   4
+
+                          | 12 12
+                    34 34 |      
+                    ------+------
+                     2 12 | 12 12
+                    34 34 |  4 3 
+
+                     2 1  | 12 12
+                    34 34 |  4 3 
+        - Expect no indentation (so use dedent() if loading from a
+          multiline string in code).
+        - Cells are represented as grids of characters. The candidate values
+          *must* appear in the correct position in each character grid.
+          E.g.  Row 1 = 123, row 2 = 456, row 3 is 789, and
           147 in column 1, 258 in column 2 and 369 in column 3.
+          A space in a candidate position indicates that candidate value
+          is not present.
         - Vertically the cells are separated by a single space except
           boxes which are separated by space pipe space (' | ').
         - Horizontally, cells are separated by an extra line. The chars
@@ -874,14 +954,15 @@ class Puzzle(Grid):
                 _cell_col = _text_col / char_width
                 _cell_row = _text_row / char_width
 
-                logging.info("add %s to cell %s, %s", _value, _cell_row, _cell_col)
+                logging.info("add %s to cell %s, %s", _value, _cell_row,
+                        _cell_col)
 
                 cell = super(Puzzle, self).get_cell(_cell_row, _cell_col)
                 cell.add_candidate(_value)
 
             _text_row = _text_row + 1
 
-        self.check_single_candidates()
+        self.onload_check_single_candidates()
         return
 
     def load_candidates_from_string(self, string):

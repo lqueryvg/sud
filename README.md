@@ -4,11 +4,10 @@
 
 - Learning Python OO and TDD
 
-- Use the same strategies a human might when solving Soduko, starting with
-  the simplest and only applying the more complex strategies
-  when needed.
+- Use human strategies to solve Soduko, only applying more complex
+  strategies when needed.
 
-  Rather than re-invent the wheel, I'll use the same names for the various
+  Rather than re-invent the wheel, I use the same names for
   solving techniques as found here:
 
   http://www.sudokuoftheday.com/techniques

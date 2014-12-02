@@ -41,7 +41,7 @@ class CandidateSet(set):
     - trying to remove final element
     - only 1 element remains after removing an element (i.e.
       we have found the only remaining possible candidate)
-    - trying to initialise with less than 2 candidate values
+    - trying to initialise with fewer than 2 candidate values
     """
 
     def __init__(self, candidate_values):
@@ -837,15 +837,13 @@ class Puzzle(Grid):
             #import pdb; pdb.set_trace()
             _line = re.sub(r' \| ', ' ', _line)  # all cells sep by space
 
-            _col = 0
+            #_col = 0
             char_width = self.box_width + 1     # including space
             for _text_col in range(self.numcols * char_width - 1):
 
                 # skip separator rows & columns
-                if (_text_row % char_width) == self.box_width:
-                    continue
-
-                if (_text_col % char_width) == self.box_width:
+                if (_text_row % char_width) == self.box_width or \
+                   (_text_col % char_width) == self.box_width:
                     continue
 
                 if _text_col >= len(_line):
@@ -865,7 +863,7 @@ class Puzzle(Grid):
 
                 if _value != _expected_value:
                     raise PuzzleParseError(
-                            'invalid candidate found\n'
+                            'invalid candidate found, '
                             'expected {}, found {}\n'
                             'line {}, col {}\n{}\n'
                              .format(
@@ -879,9 +877,10 @@ class Puzzle(Grid):
                 logging.info("add %s to cell %s, %s", _value, _cell_row, _cell_col)
 
                 cell = super(Puzzle, self).get_cell(_cell_row, _cell_col)
-                cell.add_candidate(_expected_value)
+                cell.add_candidate(_value)
 
             _text_row = _text_row + 1
+
         self.check_single_candidates()
         return
 

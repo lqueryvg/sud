@@ -56,6 +56,12 @@ class CandidateSet(set):
         if len(self) == 1:
             raise SingleCandidate
 
+    def has_single_candidate(self):
+        return len(self) == 1
+
+    def get_any_candidate(self):
+        return list(self)[0]  # grab any
+
 
 class Cell():
     def __init__(self, candidate_values, row=-1, col=-1):
@@ -73,6 +79,14 @@ class Cell():
         Intended for testing.
         """
         self.candidate_set.add(value)
+
+    def check_single_candidate(self):
+        """
+        Bypasses propagation.
+        """
+        if self.candidate_set.has_single_candidate():
+            self.value = self.candidate_set.get_any_candidate()
+            self.candidate_set.clear()    # remove all candidates
 
     def clear_candidates(self):
         self.candidate_set.clear()
@@ -574,7 +588,15 @@ class Grid(object):
                 row.append(None)
             self.grid.append(row)
 
-    def set_grid_rc_value(self, row, col, value):
+    def check_single_candidates(self):
+        """
+        Bypasses propagation.
+        """
+        for row in self.grid:
+            for cell in row:
+                cell.check_single_candidate()
+
+    def set_value(self, row, col, value):
         """
         Index by row then column.
         """
@@ -684,7 +706,7 @@ class Puzzle(Grid):
         super(Puzzle, self).__init__(box_width)
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
-                super(Puzzle, self).set_grid_rc_value(
+                super(Puzzle, self).set_value(
                     rownum, colnum, Cell([], row=rownum, col=colnum)
                 )
         self.init_all_candidates()
@@ -931,6 +953,7 @@ class Puzzle(Grid):
                 cell.add_candidate(_expected_value)
 
             _text_row = _text_row + 1
+        self.check_single_candidates()
         return
 
     def load_candidates_from_string2(self, string):

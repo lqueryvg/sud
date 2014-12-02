@@ -67,6 +67,16 @@ class Cell():
         self.cell_value_set_listeners = []
         self.candidate_removed_listeners = []
 
+    def add_candidate(self, value):
+        """
+        Bypasses all checks and propagation.
+        Intended for testing.
+        """
+        self.candidate_set.add(value)
+
+    def clear_candidates(self):
+        self.candidate_set.clear()
+
     def set_candidates(self, candidate_values):
         """
         Bypasses all checks and propagation.
@@ -320,7 +330,7 @@ class SinglePosition:
 class CandidateLines:
     """
     If the only candidates for a value in a box lie on a line (i.e.
-    a row or column) within that box, eliminates the value from
+    a row or column) within that box, eliminate the value from
     candidates of cells in other boxes on the same line.
     """
     
@@ -339,8 +349,8 @@ class CandidateLines:
     def __init__(self, box_cell_group, puzzle=None):
         """
         For every value not yet known in the box, index the list of rows and
-        cols the value can be on.  For each of those rows/cols, store the list
-        of cells within the box the value can be in.
+        cols the value can be on.  For each of those rows/cols, store the
+        list of cells within the box the value can be in.
         """
         assert(puzzle is not None)
         
@@ -682,6 +692,11 @@ class Puzzle(Grid):
         self.boxes = []         # just the boxes, for convenience
         self.init_groups()
 
+    def clear_all_candidates(self):
+        for rownum in range(self.numrows):
+            for colnum in range(self.numcols):
+                super(Puzzle, self).get_cell(rownum, colnum).clear_candidates()
+
     def init_all_candidates(self):
         for rownum in range(self.numrows):
             for colnum in range(self.numcols):
@@ -842,6 +857,84 @@ class Puzzle(Grid):
 
             _row = _row + 1
         return
+
+    def load_candidates_from_iterable2(self, iterable):
+        """
+        Expect no leading whitespace.
+        Blank lines & lines starting with '#' are skipped.
+        Each row of cells is represented by 3 consecutive rows of text.
+        Row 1 = 123, row 2 = 456, row 3 is 789.
+        Every candidate must appear in it's correct position. I.e.
+        1,4,7 in column 1, 2,5,8 in column 2 and 3,6,9 in column 3.
+        Horizontally the cells are separated by a single space except
+        boxes which are separated by space pipe space (' | ').
+
+        TODO have single load routine that supports candidates or values
+        """
+        self.clear_all_candidates()
+        _cell_row = 0
+        _text_row = 0
+        #_valid_candidate_values = set(map(str, range(1, self.numrows + 1)))
+        for _line in iterable:
+            import re
+            logging.info("_line: %s", _line)
+
+            #_line = re.sub(r'^#.*$', '', _line)  # strip comments
+            #import pdb; pdb.set_trace()
+            _line = re.sub(r' \| ', ' ', _line)  # all cells sep by space
+
+            #if re.match(r'^$', _line)   # skip blank lines
+
+            _col = 0
+            #import pdb; pdb.set_trace()
+            for _text_col in range(self.numcols * (self.box_width + 1) - 1):
+
+                # skip separator rows & columns
+                if (_text_row % (self.box_width + 1)) == self.box_width:
+                    continue
+
+                if (_text_col % (self.box_width + 1)) == self.box_width:
+                    continue
+
+                try:
+                    char = _line[_text_col]
+                except:
+                    import pdb; pdb.set_trace()
+
+                if char == ' ':    # skip blank char
+                    continue
+
+                _value = char
+                _expected_value = str(
+                    ((_text_row % (self.box_width + 1)) * self.box_width) +
+                    1 + (_text_col % (self.box_width + 1))
+                    )
+
+                if _value != _expected_value:
+                    raise PuzzleParseError(
+                            'Invalid candidate found\n'
+                            'Expected {}, found {}\n'
+                            'Line {}, col {}\n{}\n'
+                             .format(
+                                    _expected_value, _value,
+                                    _text_row, _text_col, _line,
+                             ))
+
+                _cell_col = _text_col / (self.box_width + 1)
+                _cell_row = _text_row / (self.box_width + 1)
+
+                cell = super(Puzzle, self).get_cell(_cell_row, _cell_col)
+                logging.info("add %s to cell %s, %s", _value, _cell_row, _cell_col)
+                #import pdb; pdb.set_trace()
+                # TODO make these set and add functions check for correct
+                # type, i.e. char
+                cell.add_candidate(_expected_value)
+
+            _text_row = _text_row + 1
+        return
+
+    def load_candidates_from_string2(self, string):
+        self.load_candidates_from_iterable2(iter(string.splitlines()))
 
     def load_candidates_from_string(self, string):
         self.load_candidates_from_iterable(iter(string.splitlines()))

@@ -66,7 +66,7 @@ class CandidateSet(set):
 class Cell():
     def __init__(self, candidate_values, row=-1, col=-1):
         self.value = None
-        self.name = "Cell{}{}".format(row, col)
+        self.name = "C{}{}".format(row, col)
         self.row = row
         self.col = col
         self.candidate_set = CandidateSet(candidate_values)
@@ -173,7 +173,7 @@ class Cell():
           may propagate.
         """
         logging.debug(
-            "Cell remove_candidate() %s from %s", value, self.name)
+            "%s remove_candidate %s", self.name, value)
 
         try:
             self.candidate_set.remove_candidate(value)
@@ -498,7 +498,8 @@ class CandidateLines:
         logging.info("CandidateLines.on_value_set()")
         logging.info("  %s cell=%s, value=%s", self.name, repr(cell), value)
 
-        del self.index[value]
+        if value in self.index:
+            del self.index[value]
 
         logging.info("  index =\n%s", pprint.pformat(self.index))
 
@@ -665,7 +666,7 @@ class Grid(object):
         return _box
 
     def to_string(self):
-        max_len = 1
+        max_len = 3
         for cell in self.get_all_cells():
             max_len = max(max_len, len(cell.candidate_set))
 
@@ -820,6 +821,7 @@ class Puzzle(Grid):
         all boxes should be the same width, each word
         should be the same number of characters.
         """
+        logging.info("load_from_iterable() called")
         _row = 0
         for _line in iterable:
             import re
@@ -869,6 +871,7 @@ class Puzzle(Grid):
                     _col += 1
 
             _row = _row + 1
+        logging.info("load_from_iterable() returning")
         return
 
     def load_from_string(self, string):
@@ -906,6 +909,7 @@ class Puzzle(Grid):
         - Horizontally, cells are separated by an extra line. The chars
           in the separator line can be anything and are ignored.
         """
+        logging.info("load_candidates_from_iterable() called")
         self.clear_all_candidates()
         _cell_row = 0
         _text_row = 0
@@ -978,19 +982,30 @@ def main():
 
     parser = argparse.ArgumentParser(description='Solve Sudoku puzzle.')
     parser.add_argument('filename', nargs=1)
-    parser.add_argument(
-        '--boxwidth', default=3,
-        help='box width in cells')
+    parser.add_argument('--boxwidth', default=3, help='box width in cells')
+    parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
     filename = args.filename[0]
+    if args.verbose == 0:
+        logging.getLogger().setLevel(logging.CRITICAL)
+    elif args.verbose == 1:
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    #logging.basicConfig(format="%(levelname)s %(message)s")
+    #logging.basicConfig(format="%(relativeCreated)d %(message)s")
+    logging.basicConfig(format="%(message)s")
+    #logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)
+
     puzzle = Puzzle(args.boxwidth)
 
     # TODO why can't UniqueConstraints be added after loading puzzle ?
     UniqueConstraints.add_to_puzzle(puzzle)
     puzzle.load_from_file(filename)
-    SinglePosition.add_to_puzzle(puzzle)
     CandidateLines.add_to_puzzle(puzzle)
+    SinglePosition.add_to_puzzle(puzzle)
     print puzzle.to_string()
     print metrics.to_string()
 

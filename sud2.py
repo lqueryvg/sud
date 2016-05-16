@@ -600,15 +600,16 @@ class CandidateLines:
 
 class Grid(object):
     """
-    Implements a grid of cells and provides a way of accessing them
-    individually or as groups (rows, columns or boxes).  When used by Puzzle,
+    A grid of cells with methods to access them
+    individually or as groups (rows, columns or boxes).
+    When used by Puzzle,
     the grid values are references to Cell objects.
     """
 
     def __init__(self, box_width):
         """
-        Internally a list of lists, as [row][col].
-        Coords start at 0.
+        Internally represented as a list of lists: [row][col]
+        Coords match Python list indicies and start at 0.
         """
 
         self.grid = []
@@ -646,15 +647,14 @@ class Grid(object):
         return _row
 
     def get_col_cells(self, colnum):
-        """
-        Get all cells in a column.
-        """
+        """ Get all cells in a column.  """
         _col = []
         for rownum in range(self.numrows):
             _col.append(self.get_cell(rownum, colnum))
         return _col
 
     def get_all_cells(self):
+        """ Return list of all cells """
         from itertools import chain
         # import pdb; pdb.set_trace()
         return list(chain.from_iterable(self.grid))
@@ -994,7 +994,8 @@ def main():
     parser = argparse.ArgumentParser(description='Solve Sudoku puzzle.')
     parser.add_argument('filename', nargs=1)
     parser.add_argument('--boxwidth', default=3, help='box width in cells')
-    parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='multiple times increases verbosity')
 
     args = parser.parse_args()
     filename = args.filename[0]
